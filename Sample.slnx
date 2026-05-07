@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sample.Client.Streaming/Sample.Client.Streaming.csproj" />
+    <Project Path="src/Sample.Client.Unary/Sample.Client.Unary.csproj" />
+    <Project Path="src/Sample.Server/Sample.Server.csproj" />
+    <Project Path="src/Sample.Shared/Sample.Shared.csproj" />
+  </Folder>
+</Solution>

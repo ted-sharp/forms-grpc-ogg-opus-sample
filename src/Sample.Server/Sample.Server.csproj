@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Sample.Server</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MagicOnion.Server" Version="7.0.6" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+  </ItemGroup>
+
+  <!--
+    Sample.Shared は MagicOnion.Abstractions v4 系を参照しているため、
+    .NET 10 + MagicOnion v7 サーバーから直接参照すると ClientStreamingResult の
+    [AsyncMethodBuilder] 互換性で噛み合わない。
+    DTO 定義 (Sample.Shared.Dto.*.cs) のみソースリンクして取り込み、
+    サーバー側 IRecordingService は v7 の API に沿って独自定義する。
+  -->
+  <ItemGroup>
+    <Compile Include="..\Sample.Shared\Dto\*.cs">
+      <Link>Shared\%(FileName).cs</Link>
+    </Compile>
+  </ItemGroup>
+
+</Project>
