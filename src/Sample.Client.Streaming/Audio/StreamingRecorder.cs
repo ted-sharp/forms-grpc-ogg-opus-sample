@@ -38,6 +38,13 @@ namespace Sample.Client.Streaming.Audio
 
         public event EventHandler<RecordingResult> RecordingFinished;
         public event EventHandler<Exception> RecordingFailed;
+        /// <summary>
+        /// マイクから到着した PCM フレームを波形表示用に通知する。
+        /// VAD ゲート前の生のサンプルを渡すので、無音カット中でもメーターは反応する。
+        /// イベントハンドラはオーディオキャプチャスレッドから呼ばれるため UI 反映時は Invoke 必須。
+        /// 渡す配列はイベントごとに新規確保した使い切りバッファ。
+        /// </summary>
+        public event EventHandler<AudioFrameEventArgs> AudioFrameAvailable;
 
         public async Task StartAsync(IRecordingService service)
         {
@@ -102,6 +109,9 @@ namespace Sample.Client.Streaming.Audio
                 int sampleCount = e.BytesRecorded / AudioConstants.BytesPerSample;
                 short[] pcm = new short[sampleCount];
                 Buffer.BlockCopy(e.Buffer, 0, pcm, 0, e.BytesRecorded);
+
+                AudioFrameAvailable?.Invoke(this, new AudioFrameEventArgs(pcm, sampleCount));
+
                 if (_vadGate != null)
                 {
                     _vadGate.Process(pcm, sampleCount, (buf, n) => _oggWriter.WriteSamples(buf, 0, n));

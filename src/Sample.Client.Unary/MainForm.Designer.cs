@@ -15,6 +15,7 @@ namespace Sample.Client.Unary
         private System.Windows.Forms.Label lblVadCaption;
         private System.Windows.Forms.TrackBar tbVadAggressiveness;
         private System.Windows.Forms.Label lblVadAggressiveness;
+        private Sample.Client.Unary.Ui.WaveformView waveformView;
 
         private void InitializeComponent()
         {
@@ -29,6 +30,7 @@ namespace Sample.Client.Unary
             this.lblVadCaption = new System.Windows.Forms.Label();
             this.tbVadAggressiveness = new System.Windows.Forms.TrackBar();
             this.lblVadAggressiveness = new System.Windows.Forms.Label();
+            this.waveformView = new Sample.Client.Unary.Ui.WaveformView();
             ((System.ComponentModel.ISupportInitialize)(this.tbSeek)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.tbVadAggressiveness)).BeginInit();
             this.SuspendLayout();
@@ -143,11 +145,21 @@ namespace Sample.Client.Unary
             this.lblVadAggressiveness.TabIndex = 10;
             this.lblVadAggressiveness.Text = "強め";
             //
+            // waveformView
+            //
+            this.waveformView.BackColor = System.Drawing.Color.Black;
+            this.waveformView.ForeColor = System.Drawing.Color.LimeGreen;
+            this.waveformView.Location = new System.Drawing.Point(12, 200);
+            this.waveformView.Name = "waveformView";
+            this.waveformView.Size = new System.Drawing.Size(460, 90);
+            this.waveformView.TabIndex = 11;
+            //
             // MainForm
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(490, 215);
+            this.ClientSize = new System.Drawing.Size(490, 305);
+            this.Controls.Add(this.waveformView);
             this.Controls.Add(this.lblVadAggressiveness);
             this.Controls.Add(this.tbVadAggressiveness);
             this.Controls.Add(this.lblVadCaption);

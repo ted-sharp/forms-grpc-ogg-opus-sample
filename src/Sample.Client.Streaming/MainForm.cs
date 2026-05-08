@@ -24,6 +24,7 @@ namespace Sample.Client.Streaming
 
             _recorder.RecordingFinished += Recorder_RecordingFinished;
             _recorder.RecordingFailed += Recorder_RecordingFailed;
+            _recorder.AudioFrameAvailable += Recorder_AudioFrameAvailable;
             _player.PlaybackStopped += Player_PlaybackStopped;
 
             _uiTimer = new Timer { Interval = 100 };
@@ -62,6 +63,7 @@ namespace Sample.Client.Streaming
                 SetStatus("録音開始中...");
                 _recorder.EnableVad = chkRemoveSilence.Checked;
                 _recorder.VadAggressiveness = tbVadAggressiveness.Value;
+                waveformView.Reset();
                 await _recorder.StartAsync(_rpc.Service);
                 SetStatus("録音中");
                 UpdateUi();
@@ -199,6 +201,26 @@ namespace Sample.Client.Streaming
             }
             SetStatus("録音エラー: " + ex.Message);
             UpdateUi();
+        }
+
+        private void Recorder_AudioFrameAvailable(object sender, Sample.Client.Streaming.Audio.AudioFrameEventArgs e)
+        {
+            // NAudio のキャプチャスレッドから呼ばれるので UI スレッドへマーシャルする。
+            // 高頻度 (20 ms ごと) なので Invoke ではなく BeginInvoke を使い、フォーム破棄後の例外は無視。
+            if (IsDisposed) return;
+            try
+            {
+                if (InvokeRequired)
+                {
+                    BeginInvoke(new Action(() => waveformView.AddPcm(e.Pcm, e.SampleCount)));
+                }
+                else
+                {
+                    waveformView.AddPcm(e.Pcm, e.SampleCount);
+                }
+            }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) { }
         }
 
         private void Player_PlaybackStopped(object sender, EventArgs e)

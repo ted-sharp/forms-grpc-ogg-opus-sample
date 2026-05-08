@@ -11,6 +11,7 @@ namespace Sample.Client.Stt
         private System.Windows.Forms.Button btnTranscribe;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.TextBox txtResult;
 
         private void InitializeComponent()
@@ -22,6 +23,7 @@ namespace Sample.Client.Stt
             this.btnTranscribe = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
             this.txtResult = new System.Windows.Forms.TextBox();
             this.grpEngine.SuspendLayout();
             this.SuspendLayout();
@@ -104,31 +106,42 @@ namespace Sample.Client.Stt
             this.lblStatus.TabIndex = 3;
             this.lblStatus.Text = "状態: 待機中";
             //
+            // progressBar
+            //
+            this.progressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+                | System.Windows.Forms.AnchorStyles.Right)));
+            this.progressBar.Location = new System.Drawing.Point(12, 148);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(576, 18);
+            this.progressBar.TabIndex = 4;
+            this.progressBar.Visible = false;
+            //
             // txtResult
             //
             this.txtResult.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                 | System.Windows.Forms.AnchorStyles.Left)
                 | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtResult.Location = new System.Drawing.Point(12, 152);
+            this.txtResult.Location = new System.Drawing.Point(12, 176);
             this.txtResult.Multiline = true;
             this.txtResult.Name = "txtResult";
             this.txtResult.ReadOnly = true;
             this.txtResult.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.txtResult.Size = new System.Drawing.Size(576, 256);
-            this.txtResult.TabIndex = 4;
+            this.txtResult.TabIndex = 5;
             this.txtResult.WordWrap = true;
             //
             // MainForm
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(600, 420);
+            this.ClientSize = new System.Drawing.Size(600, 444);
             this.Controls.Add(this.txtResult);
+            this.Controls.Add(this.progressBar);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnTranscribe);
             this.Controls.Add(this.grpEngine);
-            this.MinimumSize = new System.Drawing.Size(500, 320);
+            this.MinimumSize = new System.Drawing.Size(500, 344);
             this.Name = "MainForm";
             this.Text = "Sample.Client.Stt (STT)";
             this.grpEngine.ResumeLayout(false);
