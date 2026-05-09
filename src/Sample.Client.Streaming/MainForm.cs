@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Windows.Forms;
 using Sample.Client.Streaming.Audio;
 using Sample.Client.Streaming.Rpc;
@@ -18,7 +19,10 @@ namespace Sample.Client.Streaming
         {
             InitializeComponent();
 
-            _rpc = new RecordingClient();
+            var host = ConfigurationManager.AppSettings["Server.Host"];
+            if (string.IsNullOrEmpty(host)) host = "localhost";
+            if (!int.TryParse(ConfigurationManager.AppSettings["Server.Port"], out var port)) port = 5000;
+            _rpc = new RecordingClient(host, port);
             _recorder = new StreamingRecorder();
             _player = new Player();
 
