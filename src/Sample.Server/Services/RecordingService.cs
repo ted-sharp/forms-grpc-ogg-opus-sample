@@ -18,13 +18,19 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
 
     public async Task<ClientStreamingResult<RecordingChunk, RecordingResult>> SaveStreaming()
     {
+        // GetClientStreamingContext は MagicOnion v7 が提供する「クライアントからのストリームを受け取り始める」合図。
+        // これを取得した時点で gRPC レイヤーが受信状態に入る。
         var streamingContext = GetClientStreamingContext<RecordingChunk, RecordingResult>();
 
         long total = 0;
         try
         {
+            // サーバーは Opus も Ogg も解釈しない。受け取った byte[] をそのままファイルへ追記するだけ。
+            // これは v4↔v7 の API 差異を最小化するための意図的な設計 (CLAUDE.md 参照)。
             await using (var output = _store.OpenWrite())
             {
+                // v7 の受信ループ: MoveNext が false を返すまで Current にチャンクが入ってくる。
+                // (v4 にあった ReadAllAsync は v7 で廃止されているのでこの形で書く)
                 while (await streamingContext.MoveNext())
                 {
                     var chunk = streamingContext.Current;
@@ -85,6 +91,9 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
 
     public async UnaryResult<DownloadResult> Download(DownloadRequest request)
     {
+        // request.FileId は単一ファイル前提のサンプルなので未使用。
+        // 引数自体は「v4 クライアントが空引数 Unary を bin8 で送って v7 サーバー側のデシリアライズが
+        // 失敗する」問題を避けるためのダミーで、省略はできない。詳細は DownloadRequest 参照。
         _ = request;
         var bytes = await _store.ReadAllAsync();
         return new DownloadResult
