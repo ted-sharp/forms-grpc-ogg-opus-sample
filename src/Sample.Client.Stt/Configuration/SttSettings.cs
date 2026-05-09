@@ -15,13 +15,13 @@ namespace Sample.Client.Stt.Configuration
 
         public sealed class AzureSection
         {
-            public string Key { get; set; } = string.Empty;
+            public string Key { get; set; } = String.Empty;
             public string Region { get; set; } = "japaneast";
         }
 
         public sealed class ModelsSection
         {
-            public string RootDir { get; set; } = string.Empty;
+            public string RootDir { get; set; } = String.Empty;
             public string MoonshineDir { get; set; } = "sherpa-onnx-moonshine-base-ja-quantized-2026-02-27";
             public string WhisperDir { get; set; } = "sherpa-onnx-whisper-large-v3";
         }
@@ -45,9 +45,9 @@ namespace Sample.Client.Stt.Configuration
 
             // 環境変数で上書き (.env 風の単純な命名規約に揃える)
             var key = Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-            if (!string.IsNullOrEmpty(key)) settings.Azure.Key = key;
+            if (!String.IsNullOrEmpty(key)) settings.Azure.Key = key;
             var region = Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
-            if (!string.IsNullOrEmpty(region)) settings.Azure.Region = region;
+            if (!String.IsNullOrEmpty(region)) settings.Azure.Region = region;
 
             return settings;
         }
@@ -61,13 +61,13 @@ namespace Sample.Client.Stt.Configuration
         /// </summary>
         public string ResolveModelDir(string subDir)
         {
-            if (string.IsNullOrEmpty(subDir))
+            if (String.IsNullOrEmpty(subDir))
             {
                 throw new ArgumentException("サブディレクトリ名が指定されていません。", nameof(subDir));
             }
 
             string root;
-            if (!string.IsNullOrEmpty(this.Models.RootDir))
+            if (!String.IsNullOrEmpty(this.Models.RootDir))
             {
                 root = Path.IsPathRooted(this.Models.RootDir)
                     ? this.Models.RootDir

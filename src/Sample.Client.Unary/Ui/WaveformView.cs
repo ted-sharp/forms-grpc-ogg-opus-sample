@@ -24,23 +24,23 @@ namespace Sample.Client.Unary.Ui
 
         public WaveformView()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
                 | ControlStyles.UserPaint
                 | ControlStyles.ResizeRedraw, true);
-            BackColor = Color.Black;
-            ForeColor = Color.LimeGreen;
+            this.BackColor = Color.Black;
+            this.ForeColor = Color.LimeGreen;
         }
 
         /// <summary>録音開始時などに呼んで波形をクリアする。</summary>
         public void Reset()
         {
-            Array.Clear(_peaks, 0, _peaks.Length);
-            _writeIndex = 0;
-            _filled = 0;
-            _carrySamples = 0;
-            _carryPeak = 0;
-            Invalidate();
+            Array.Clear(this._peaks, 0, this._peaks.Length);
+            this._writeIndex = 0;
+            this._filled = 0;
+            this._carrySamples = 0;
+            this._carryPeak = 0;
+            this.Invalidate();
         }
 
         /// <summary>16-bit signed mono PCM を流し込む。UI スレッドから呼ぶこと。</summary>
@@ -49,8 +49,8 @@ namespace Sample.Client.Unary.Ui
             if (pcm == null || count <= 0) return;
 
             int i = 0;
-            short blockPeak = _carryPeak;
-            int blockCount = _carrySamples;
+            short blockPeak = this._carryPeak;
+            int blockCount = this._carrySamples;
 
             while (i < count)
             {
@@ -59,7 +59,7 @@ namespace Sample.Client.Unary.Ui
                 for (int k = 0; k < take; k++)
                 {
                     short s = pcm[i + k];
-                    short abs = s == short.MinValue ? short.MaxValue : Math.Abs(s);
+                    short abs = s == Int16.MinValue ? Int16.MaxValue : Math.Abs(s);
                     if (abs > blockPeak) blockPeak = abs;
                 }
                 i += take;
@@ -67,50 +67,50 @@ namespace Sample.Client.Unary.Ui
 
                 if (blockCount >= SamplesPerBlock)
                 {
-                    _peaks[_writeIndex] = blockPeak / 32768f;
-                    _writeIndex = (_writeIndex + 1) % BufferLength;
-                    if (_filled < BufferLength) _filled++;
+                    this._peaks[this._writeIndex] = blockPeak / 32768f;
+                    this._writeIndex = (this._writeIndex + 1) % BufferLength;
+                    if (this._filled < BufferLength) this._filled++;
                     blockCount = 0;
                     blockPeak = 0;
                 }
             }
 
-            _carrySamples = blockCount;
-            _carryPeak = blockPeak;
+            this._carrySamples = blockCount;
+            this._carryPeak = blockPeak;
 
-            Invalidate();
+            this.Invalidate();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(BackColor);
+            g.Clear(this.BackColor);
 
-            int w = Width;
-            int h = Height;
+            int w = this.Width;
+            int h = this.Height;
             if (w <= 2 || h <= 2) return;
 
             float midY = h / 2f;
 
-            using (var centerPen = new Pen(Color.FromArgb(60, ForeColor)))
+            using (var centerPen = new Pen(Color.FromArgb(60, this.ForeColor)))
             {
                 g.DrawLine(centerPen, 0, midY, w, midY);
             }
 
-            if (_filled == 0) return;
+            if (this._filled == 0) return;
 
             // リングバッファを古い順に並べ直して N 個の点として描画する。
-            int n = _filled;
-            int start = (_writeIndex - n + BufferLength) % BufferLength;
+            int n = this._filled;
+            int start = (this._writeIndex - n + BufferLength) % BufferLength;
             float maxAmp = (h / 2f) - 2f;
 
-            using (var pen = new Pen(ForeColor, 1.2f))
+            using (var pen = new Pen(this.ForeColor, 1.2f))
             {
                 PointF? prev = null;
                 for (int j = 0; j < n; j++)
                 {
-                    float peak = _peaks[(start + j) % BufferLength];
+                    float peak = this._peaks[(start + j) % BufferLength];
                     float x = (float)j * w / Math.Max(1, BufferLength - 1);
                     float dy = peak * maxAmp;
                     var top = new PointF(x, midY - dy);

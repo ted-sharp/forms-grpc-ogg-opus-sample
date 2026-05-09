@@ -19,27 +19,27 @@ public class FileSystemRecordingStore : IRecordingStore
 
         // ファイル名: appsettings.json の "Recording:FileName" を最優先、無ければ "recording.opus" 固定。
         var fileName = configuration["Recording:FileName"] ?? "recording.opus";
-        _filePath = Path.Combine(dir, fileName);
+        this._filePath = Path.Combine(dir, fileName);
     }
 
-    public string SavedPath => _filePath;
+    public string SavedPath => this._filePath;
 
     public Stream OpenWrite()
     {
         // FileMode.Create = 既存ファイルがあれば毎回上書き。
         // このサンプルは履歴を持たない設計 (常に最新の 1 ファイルのみ保存)。
-        return new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        return new FileStream(this._filePath, FileMode.Create, FileAccess.Write, FileShare.None);
     }
 
     public async Task WriteAllAsync(byte[] bytes)
     {
-        using var fs = OpenWrite();
+        using var fs = this.OpenWrite();
         await fs.WriteAsync(bytes, 0, bytes.Length);
     }
 
     public async Task<byte[]?> ReadAllAsync()
     {
-        if (!File.Exists(_filePath)) return null;
-        return await File.ReadAllBytesAsync(_filePath);
+        if (!File.Exists(this._filePath)) return null;
+        return await File.ReadAllBytesAsync(this._filePath);
     }
 }

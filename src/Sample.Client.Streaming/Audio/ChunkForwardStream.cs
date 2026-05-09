@@ -23,46 +23,46 @@ namespace Sample.Client.Streaming.Audio
 
         public ChunkForwardStream(Func<byte[], Task> sendAsync, int flushThreshold = 32 * 1024)
         {
-            _sendAsync = sendAsync ?? throw new ArgumentNullException(nameof(sendAsync));
-            _flushThreshold = flushThreshold;
+            this._sendAsync = sendAsync ?? throw new ArgumentNullException(nameof(sendAsync));
+            this._flushThreshold = flushThreshold;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (_closed) return;
+            if (this._closed) return;
             byte[] toSend = null;
-            lock (_lock)
+            lock (this._lock)
             {
-                if (_closed) return;
-                _buffer.Write(buffer, offset, count);
-                if (_buffer.Length >= _flushThreshold)
+                if (this._closed) return;
+                this._buffer.Write(buffer, offset, count);
+                if (this._buffer.Length >= this._flushThreshold)
                 {
-                    toSend = _buffer.ToArray();
-                    _buffer.SetLength(0);
+                    toSend = this._buffer.ToArray();
+                    this._buffer.SetLength(0);
                 }
             }
             if (toSend != null)
             {
-                _sendAsync(toSend).GetAwaiter().GetResult();
+                this._sendAsync(toSend).GetAwaiter().GetResult();
             }
         }
 
         public override void Flush()
         {
-            if (_closed) return;
+            if (this._closed) return;
             byte[] toSend = null;
-            lock (_lock)
+            lock (this._lock)
             {
-                if (_closed) return;
-                if (_buffer.Length > 0)
+                if (this._closed) return;
+                if (this._buffer.Length > 0)
                 {
-                    toSend = _buffer.ToArray();
-                    _buffer.SetLength(0);
+                    toSend = this._buffer.ToArray();
+                    this._buffer.SetLength(0);
                 }
             }
             if (toSend != null)
             {
-                _sendAsync(toSend).GetAwaiter().GetResult();
+                this._sendAsync(toSend).GetAwaiter().GetResult();
             }
         }
 
@@ -70,7 +70,7 @@ namespace Sample.Client.Streaming.Audio
         /// 呼び出し後も再使用しないこと。</summary>
         public Task CompleteAsync()
         {
-            Flush();
+            this.Flush();
             return Task.CompletedTask;
         }
 
@@ -97,7 +97,7 @@ namespace Sample.Client.Streaming.Audio
                 // OnRecordingStopped) でこの Stream を触ったときに ObjectDisposedException が出て
                 // gRPC 呼び出しが中断され、サーバーで「client reset the request stream」と観測される。
                 // クローズ済みフラグだけ立てて、_buffer の解放は GC に任せる。
-                _closed = true;
+                this._closed = true;
             }
             base.Dispose(disposing);
         }

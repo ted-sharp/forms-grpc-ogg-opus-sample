@@ -21,29 +21,29 @@ namespace Sample.Client.Streaming.Audio
 
         public event EventHandler PlaybackStopped;
 
-        public bool IsLoaded => _pcmStream != null;
+        public bool IsLoaded => this._pcmStream != null;
 
-        public bool IsPlaying => _waveOut != null && _waveOut.PlaybackState == PlaybackState.Playing;
+        public bool IsPlaying => this._waveOut != null && this._waveOut.PlaybackState == PlaybackState.Playing;
 
-        public bool IsPaused => _waveOut != null && _waveOut.PlaybackState == PlaybackState.Paused;
+        public bool IsPaused => this._waveOut != null && this._waveOut.PlaybackState == PlaybackState.Paused;
 
-        public TimeSpan TotalTime => _pcmStream != null
-            ? TimeSpan.FromSeconds((double)_pcmStream.Length / AudioConstants.BytesPerSecond)
+        public TimeSpan TotalTime => this._pcmStream != null
+            ? TimeSpan.FromSeconds((double)this._pcmStream.Length / AudioConstants.BytesPerSecond)
             : TimeSpan.Zero;
 
         public TimeSpan CurrentTime
         {
-            get => _pcmStream != null
-                ? TimeSpan.FromSeconds((double)_pcmStream.Position / AudioConstants.BytesPerSecond)
+            get => this._pcmStream != null
+                ? TimeSpan.FromSeconds((double)this._pcmStream.Position / AudioConstants.BytesPerSecond)
                 : TimeSpan.Zero;
             set
             {
-                if (_pcmStream == null) return;
+                if (this._pcmStream == null) return;
                 long bytePos = (long)(value.TotalSeconds * AudioConstants.BytesPerSecond);
                 if (bytePos < 0) bytePos = 0;
-                if (bytePos > _pcmStream.Length) bytePos = _pcmStream.Length;
+                if (bytePos > this._pcmStream.Length) bytePos = this._pcmStream.Length;
                 bytePos -= bytePos % AudioConstants.BytesPerSample; // align to 16-bit boundary
-                _pcmStream.Position = bytePos;
+                this._pcmStream.Position = bytePos;
             }
         }
 
@@ -73,39 +73,39 @@ namespace Sample.Client.Streaming.Audio
             }
             pcmBytes.Position = 0;
 
-            DisposeWaveOut();
-            _pcmBytes?.Dispose();
-            _pcmBytes = pcmBytes;
-            _pcmStream = new RawSourceWaveStream(_pcmBytes, new WaveFormat(AudioConstants.SampleRate, AudioConstants.BitsPerSample, AudioConstants.Channels));
+            this.DisposeWaveOut();
+            this._pcmBytes?.Dispose();
+            this._pcmBytes = pcmBytes;
+            this._pcmStream = new RawSourceWaveStream(this._pcmBytes, new WaveFormat(AudioConstants.SampleRate, AudioConstants.BitsPerSample, AudioConstants.Channels));
         }
 
         public void Play()
         {
-            if (_pcmStream == null) throw new InvalidOperationException("再生対象が読み込まれていません。");
+            if (this._pcmStream == null) throw new InvalidOperationException("再生対象が読み込まれていません。");
 
-            if (_waveOut == null)
+            if (this._waveOut == null)
             {
-                _waveOut = new WaveOutEvent();
-                _waveOut.PlaybackStopped += OnWaveOutStopped;
-                _waveOut.Init(_pcmStream);
+                this._waveOut = new WaveOutEvent();
+                this._waveOut.PlaybackStopped += this.OnWaveOutStopped;
+                this._waveOut.Init(this._pcmStream);
             }
-            _waveOut.Play();
+            this._waveOut.Play();
         }
 
         public void Pause()
         {
-            _waveOut?.Pause();
+            this._waveOut?.Pause();
         }
 
         public void Stop()
         {
-            if (_waveOut != null)
+            if (this._waveOut != null)
             {
-                _waveOut.Stop();
+                this._waveOut.Stop();
             }
-            if (_pcmStream != null)
+            if (this._pcmStream != null)
             {
-                _pcmStream.Position = 0;
+                this._pcmStream.Position = 0;
             }
         }
 
@@ -116,21 +116,21 @@ namespace Sample.Client.Streaming.Audio
 
         private void DisposeWaveOut()
         {
-            if (_waveOut != null)
+            if (this._waveOut != null)
             {
-                _waveOut.PlaybackStopped -= OnWaveOutStopped;
-                try { _waveOut.Dispose(); } catch { }
-                _waveOut = null;
+                this._waveOut.PlaybackStopped -= this.OnWaveOutStopped;
+                try { this._waveOut.Dispose(); } catch { }
+                this._waveOut = null;
             }
         }
 
         public void Dispose()
         {
-            DisposeWaveOut();
-            _pcmStream?.Dispose();
-            _pcmStream = null;
-            _pcmBytes?.Dispose();
-            _pcmBytes = null;
+            this.DisposeWaveOut();
+            this._pcmStream?.Dispose();
+            this._pcmStream = null;
+            this._pcmBytes?.Dispose();
+            this._pcmBytes = null;
         }
     }
 }

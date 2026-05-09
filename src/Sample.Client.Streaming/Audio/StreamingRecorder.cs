@@ -34,7 +34,7 @@ namespace Sample.Client.Streaming.Audio
         /// <summary>WebRTC VAD のアグレッシブ度 (0..3、3 が最も厳しい)。StartAsync 前に設定すること。</summary>
         public int VadAggressiveness { get; set; } = 0;
 
-        public TimeSpan Elapsed => IsRecording ? DateTime.UtcNow - _startUtc : TimeSpan.Zero;
+        public TimeSpan Elapsed => this.IsRecording ? DateTime.UtcNow - this._startUtc : TimeSpan.Zero;
 
         public event EventHandler<RecordingResult> RecordingFinished;
         public event EventHandler<Exception> RecordingFailed;
@@ -48,45 +48,45 @@ namespace Sample.Client.Streaming.Audio
 
         public async Task StartAsync(IRecordingService service)
         {
-            if (IsRecording) throw new InvalidOperationException("Already recording");
+            if (this.IsRecording) throw new InvalidOperationException("Already recording");
 
-            _encoder = OpusEncoder.Create(AudioConstants.SampleRate, AudioConstants.Channels, OpusApplication.OPUS_APPLICATION_VOIP);
-            _encoder.Bitrate = AudioConstants.BitRate;
+            this._encoder = OpusEncoder.Create(AudioConstants.SampleRate, AudioConstants.Channels, OpusApplication.OPUS_APPLICATION_VOIP);
+            this._encoder.Bitrate = AudioConstants.BitRate;
 
             // MagicOnion v4 client: SaveStreaming() returns ClientStreamingResult<,> synchronously.
-            _streamCall = service.SaveStreaming();
+            this._streamCall = service.SaveStreaming();
             await Task.Yield();
 
-            _forwardStream = new ChunkForwardStream(async bytes =>
+            this._forwardStream = new ChunkForwardStream(async bytes =>
             {
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] WriteAsync chunk={bytes.Length}");
                 // ConfigureAwait(false) が必須。Flush() は ChunkForwardStream で .GetAwaiter().GetResult()
                 // で同期ブロックされる経路があり (UI スレッドからの warm-up Flush や OnRecordingStopped の Finish)、
                 // 内側の await が UI SyncContext を取りに戻ろうとするとデッドロックする。
-                await _streamCall.RequestStream.WriteAsync(new RecordingChunk { OggOpusBytes = bytes })
+                await this._streamCall.RequestStream.WriteAsync(new RecordingChunk { OggOpusBytes = bytes })
                     .ConfigureAwait(false);
             });
-            _oggWriter = new OpusOggWriteStream(_encoder, _forwardStream);
+            this._oggWriter = new OpusOggWriteStream(this._encoder, this._forwardStream);
 
-            _vadGate = EnableVad ? new VadGate(VadAggressiveness) : null;
+            this._vadGate = this.EnableVad ? new VadGate(this.VadAggressiveness) : null;
 
             // OpusOggWriteStream 構築時に OpusHead/OpusTags が ChunkForwardStream に書かれているはずなので、
             // 即フラッシュして gRPC ストリームに最初の WriteAsync を打ち込んでおく。これで遅延起動による
             // 不安定さを排除する。
             System.Diagnostics.Debug.WriteLine("[StreamingRecorder] initial flush to warm up gRPC stream");
-            _forwardStream.Flush();
+            this._forwardStream.Flush();
 
-            _waveIn = new WaveInEvent
+            this._waveIn = new WaveInEvent
             {
                 WaveFormat = new WaveFormat(AudioConstants.SampleRate, AudioConstants.BitsPerSample, AudioConstants.Channels),
                 BufferMilliseconds = AudioConstants.FrameMilliseconds,
             };
-            _waveIn.DataAvailable += OnDataAvailable;
-            _waveIn.RecordingStopped += OnRecordingStopped;
+            this._waveIn.DataAvailable += this.OnDataAvailable;
+            this._waveIn.RecordingStopped += this.OnRecordingStopped;
 
-            _startUtc = DateTime.UtcNow;
-            IsRecording = true;
-            _waveIn.StartRecording();
+            this._startUtc = DateTime.UtcNow;
+            this.IsRecording = true;
+            this._waveIn.StartRecording();
         }
 
         /// <summary>
@@ -94,10 +94,10 @@ namespace Sample.Client.Streaming.Audio
         /// </summary>
         public Task StopAsync()
         {
-            if (!IsRecording) return Task.CompletedTask;
+            if (!this.IsRecording) return Task.CompletedTask;
             var tcs = new TaskCompletionSource<object>();
-            _stopTcs = tcs;
-            _waveIn?.StopRecording();
+            this._stopTcs = tcs;
+            this._waveIn?.StopRecording();
             return tcs.Task;
         }
 
@@ -112,20 +112,20 @@ namespace Sample.Client.Streaming.Audio
 
                 AudioFrameAvailable?.Invoke(this, new AudioFrameEventArgs(pcm, sampleCount));
 
-                if (_vadGate != null)
+                if (this._vadGate != null)
                 {
-                    _vadGate.Process(pcm, sampleCount, (buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                    this._vadGate.Process(pcm, sampleCount, (buf, n) => this._oggWriter.WriteSamples(buf, 0, n));
                 }
                 else
                 {
-                    _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                    this._oggWriter.WriteSamples(pcm, 0, sampleCount);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] OnDataAvailable failed: {ex}");
                 RecordingFailed?.Invoke(this, new InvalidOperationException($"[Step=OnDataAvailable] {ex.GetType().Name}: {ex.Message}", ex));
-                _waveIn?.StopRecording();
+                this._waveIn?.StopRecording();
             }
         }
 
@@ -140,7 +140,7 @@ namespace Sample.Client.Streaming.Audio
                 // VAD ゲートが Open 状態のまま録音終了した場合の端数フレームを吐き出す。
                 // Finish() の後に WriteSamples を呼ぶと内部 Stream が Close 済みで死ぬので
                 // 必ず Finish() の前に行う。
-                _vadGate?.Flush((buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                this._vadGate?.Flush((buf, n) => this._oggWriter.WriteSamples(buf, 0, n));
 
                 lastStep = "OggWriter.Finish";
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] {lastStep}");
@@ -148,18 +148,18 @@ namespace Sample.Client.Streaming.Audio
                 // 呼ぶ。我々の ChunkForwardStream.Flush() は同期的に gRPC WriteAsync を完了
                 // させるので、この時点で Ogg Opus データはサーバーへの request stream に
                 // すべて流し込み終わっている。したがって追加の CompleteAsync 呼び出しは不要。
-                _oggWriter?.Finish();
+                this._oggWriter?.Finish();
 
                 lastStep = "RequestStream.CompleteAsync (END_STREAM)";
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] {lastStep}");
-                if (_streamCall.RequestStream != null)
+                if (this._streamCall.RequestStream != null)
                 {
-                    await _streamCall.RequestStream.CompleteAsync();
+                    await this._streamCall.RequestStream.CompleteAsync();
                 }
 
                 lastStep = "ResponseAsync (await server response)";
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] {lastStep}");
-                var result = await _streamCall.ResponseAsync;
+                var result = await this._streamCall.ResponseAsync;
                 System.Diagnostics.Debug.WriteLine($"[StreamingRecorder] response received: success={result?.Success}");
 
                 if (e.Exception != null)
@@ -180,10 +180,10 @@ namespace Sample.Client.Streaming.Audio
             }
             finally
             {
-                IsRecording = false;
-                CleanUp();
-                var tcs = _stopTcs;
-                _stopTcs = null;
+                this.IsRecording = false;
+                this.CleanUp();
+                var tcs = this._stopTcs;
+                this._stopTcs = null;
                 if (tcs != null)
                 {
                     if (captured != null) tcs.TrySetException(captured);
@@ -194,26 +194,26 @@ namespace Sample.Client.Streaming.Audio
 
         private void CleanUp()
         {
-            try { _waveIn?.Dispose(); } catch { }
-            _waveIn = null;
-            try { _vadGate?.Dispose(); } catch { }
-            _vadGate = null;
-            try { _forwardStream?.Dispose(); } catch { }
-            _forwardStream = null;
-            try { _streamCall.Dispose(); } catch { }
-            _oggWriter = null;
-            _encoder = null;
+            try { this._waveIn?.Dispose(); } catch { }
+            this._waveIn = null;
+            try { this._vadGate?.Dispose(); } catch { }
+            this._vadGate = null;
+            try { this._forwardStream?.Dispose(); } catch { }
+            this._forwardStream = null;
+            try { this._streamCall.Dispose(); } catch { }
+            this._oggWriter = null;
+            this._encoder = null;
         }
 
         public void Dispose()
         {
-            if (IsRecording)
+            if (this.IsRecording)
             {
-                try { _waveIn?.StopRecording(); } catch { }
+                try { this._waveIn?.StopRecording(); } catch { }
                 // OnRecordingStopped の完了を待たずに破棄するパス。
                 // フォーム閉じ時など。pending の送信は失われる。
             }
-            CleanUp();
+            this.CleanUp();
         }
     }
 }

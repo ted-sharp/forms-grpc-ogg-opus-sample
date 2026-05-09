@@ -7,8 +7,8 @@ namespace Sample.Client.Unary.Audio
     {
         public AudioFrameEventArgs(short[] pcm, int sampleCount)
         {
-            Pcm = pcm;
-            SampleCount = sampleCount;
+            this.Pcm = pcm;
+            this.SampleCount = sampleCount;
         }
 
         public short[] Pcm { get; }

@@ -16,8 +16,8 @@ namespace Sample.Client.Unary.Rpc
                 new ChannelOption(ChannelOptions.MaxReceiveMessageLength, 64 * 1024 * 1024),
                 new ChannelOption(ChannelOptions.MaxSendMessageLength, 64 * 1024 * 1024),
             };
-            _channel = new Channel(host, port, ChannelCredentials.Insecure, options);
-            Service = MagicOnionClient.Create<IRecordingService>(_channel);
+            this._channel = new Channel(host, port, ChannelCredentials.Insecure, options);
+            this.Service = MagicOnionClient.Create<IRecordingService>(this._channel);
         }
 
         public IRecordingService Service { get; }
@@ -26,7 +26,7 @@ namespace Sample.Client.Unary.Rpc
         {
             try
             {
-                _channel.ShutdownAsync().GetAwaiter().GetResult();
+                this._channel.ShutdownAsync().GetAwaiter().GetResult();
             }
             catch
             {

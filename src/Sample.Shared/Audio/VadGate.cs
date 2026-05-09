@@ -32,15 +32,15 @@ namespace Sample.Shared.Audio
             if (aggressiveness < 0) aggressiveness = 0;
             if (aggressiveness > 3) aggressiveness = 3;
 
-            _vad = new WebRtcVad
+            this._vad = new WebRtcVad
             {
                 OperatingMode = (OperatingMode)aggressiveness,
                 SampleRate = SampleRate.Is48kHz,
                 FrameLength = FrameLength.Is20ms,
             };
 
-            _preroll = new short[PrerollFrames][];
-            for (int i = 0; i < PrerollFrames; i++) _preroll[i] = new short[Frame];
+            this._preroll = new short[PrerollFrames][];
+            for (int i = 0; i < PrerollFrames; i++) this._preroll[i] = new short[Frame];
         }
 
         /// <summary>
@@ -53,16 +53,16 @@ namespace Sample.Shared.Audio
             int offset = 0;
             while (offset < count)
             {
-                int copy = Frame - _accumLen;
+                int copy = Frame - this._accumLen;
                 if (copy > count - offset) copy = count - offset;
-                Buffer.BlockCopy(input, offset * sizeof(short), _accum, _accumLen * sizeof(short), copy * sizeof(short));
-                _accumLen += copy;
+                Buffer.BlockCopy(input, offset * sizeof(short), this._accum, this._accumLen * sizeof(short), copy * sizeof(short));
+                this._accumLen += copy;
                 offset += copy;
 
-                if (_accumLen == Frame)
+                if (this._accumLen == Frame)
                 {
-                    ProcessFrame(_accum, emit);
-                    _accumLen = 0;
+                    this.ProcessFrame(this._accum, emit);
+                    this._accumLen = 0;
                 }
             }
         }
@@ -73,68 +73,68 @@ namespace Sample.Shared.Audio
         /// </summary>
         public void Flush(Action<short[], int> emit)
         {
-            if (_isOpen && _accumLen > 0)
+            if (this._isOpen && this._accumLen > 0)
             {
-                emit(_accum, _accumLen);
-                _accumLen = 0;
+                emit(this._accum, this._accumLen);
+                this._accumLen = 0;
             }
         }
 
         private void ProcessFrame(short[] frame, Action<short[], int> emit)
         {
-            bool isVoice = _vad.HasSpeech(frame);
+            bool isVoice = this._vad.HasSpeech(frame);
 
-            if (_isOpen)
+            if (this._isOpen)
             {
                 emit(frame, Frame);
                 if (isVoice)
                 {
-                    _hangover = HangoverFrames;
+                    this._hangover = HangoverFrames;
                 }
                 else
                 {
-                    _hangover--;
-                    if (_hangover <= 0)
+                    this._hangover--;
+                    if (this._hangover <= 0)
                     {
-                        _isOpen = false;
-                        _voiceRun = 0;
+                        this._isOpen = false;
+                        this._voiceRun = 0;
                     }
                 }
                 return;
             }
 
             // Closed: 直近フレームをリングに溜め、トリガー成立で一括フラッシュして開く。
-            short[] slot = _preroll[_prerollHead];
+            short[] slot = this._preroll[this._prerollHead];
             Buffer.BlockCopy(frame, 0, slot, 0, Frame * sizeof(short));
-            _prerollHead = (_prerollHead + 1) % PrerollFrames;
-            if (_prerollCount < PrerollFrames) _prerollCount++;
+            this._prerollHead = (this._prerollHead + 1) % PrerollFrames;
+            if (this._prerollCount < PrerollFrames) this._prerollCount++;
 
             if (isVoice)
             {
-                _voiceRun++;
-                if (_voiceRun >= TriggerFrames)
+                this._voiceRun++;
+                if (this._voiceRun >= TriggerFrames)
                 {
-                    int start = (_prerollHead - _prerollCount + PrerollFrames) % PrerollFrames;
-                    for (int i = 0; i < _prerollCount; i++)
+                    int start = (this._prerollHead - this._prerollCount + PrerollFrames) % PrerollFrames;
+                    for (int i = 0; i < this._prerollCount; i++)
                     {
                         int idx = (start + i) % PrerollFrames;
-                        emit(_preroll[idx], Frame);
+                        emit(this._preroll[idx], Frame);
                     }
-                    _prerollCount = 0;
-                    _prerollHead = 0;
-                    _isOpen = true;
-                    _hangover = HangoverFrames;
+                    this._prerollCount = 0;
+                    this._prerollHead = 0;
+                    this._isOpen = true;
+                    this._hangover = HangoverFrames;
                 }
             }
             else
             {
-                _voiceRun = 0;
+                this._voiceRun = 0;
             }
         }
 
         public void Dispose()
         {
-            _vad?.Dispose();
+            this._vad?.Dispose();
         }
     }
 }

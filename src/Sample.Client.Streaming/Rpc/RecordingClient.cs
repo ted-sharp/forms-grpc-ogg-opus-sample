@@ -17,8 +17,8 @@ namespace Sample.Client.Streaming.Rpc
                 new ChannelOption(ChannelOptions.MaxReceiveMessageLength, 64 * 1024 * 1024),
                 new ChannelOption(ChannelOptions.MaxSendMessageLength, 64 * 1024 * 1024),
             };
-            _channel = new Channel(host, port, ChannelCredentials.Insecure, options);
-            Service = MagicOnionClient.Create<IRecordingService>(_channel);
+            this._channel = new Channel(host, port, ChannelCredentials.Insecure, options);
+            this.Service = MagicOnionClient.Create<IRecordingService>(this._channel);
         }
 
         public IRecordingService Service { get; }
@@ -30,14 +30,14 @@ namespace Sample.Client.Streaming.Rpc
         public Task ConnectAsync(TimeSpan? deadline = null)
         {
             var dl = DateTime.UtcNow.Add(deadline ?? TimeSpan.FromSeconds(5));
-            return _channel.ConnectAsync(dl);
+            return this._channel.ConnectAsync(dl);
         }
 
         public void Dispose()
         {
             try
             {
-                _channel.ShutdownAsync().GetAwaiter().GetResult();
+                this._channel.ShutdownAsync().GetAwaiter().GetResult();
             }
             catch
             {

@@ -34,7 +34,7 @@ namespace Sample.Client.Unary.Audio
         /// <summary>WebRTC VAD のアグレッシブ度 (0..3、3 が最も厳しい)。StartAsync 前に設定すること。</summary>
         public int VadAggressiveness { get; set; } = 0;
 
-        public TimeSpan Elapsed => IsRecording ? DateTime.UtcNow - _startUtc : TimeSpan.Zero;
+        public TimeSpan Elapsed => this.IsRecording ? DateTime.UtcNow - this._startUtc : TimeSpan.Zero;
 
         public event EventHandler<RecordingResult> RecordingFinished;
         public event EventHandler<Exception> RecordingFailed;
@@ -48,28 +48,28 @@ namespace Sample.Client.Unary.Audio
 
         public Task StartAsync(IRecordingService service)
         {
-            if (IsRecording) throw new InvalidOperationException("Already recording");
+            if (this.IsRecording) throw new InvalidOperationException("Already recording");
 
-            _service = service ?? throw new ArgumentNullException(nameof(service));
-            _encoder = OpusEncoder.Create(AudioConstants.SampleRate, AudioConstants.Channels, OpusApplication.OPUS_APPLICATION_VOIP);
-            _encoder.Bitrate = AudioConstants.BitRate;
+            this._service = service ?? throw new ArgumentNullException(nameof(service));
+            this._encoder = OpusEncoder.Create(AudioConstants.SampleRate, AudioConstants.Channels, OpusApplication.OPUS_APPLICATION_VOIP);
+            this._encoder.Bitrate = AudioConstants.BitRate;
 
-            _buffer = new MemoryStream();
-            _oggWriter = new OpusOggWriteStream(_encoder, _buffer);
+            this._buffer = new MemoryStream();
+            this._oggWriter = new OpusOggWriteStream(this._encoder, this._buffer);
 
-            _vadGate = EnableVad ? new VadGate(VadAggressiveness) : null;
+            this._vadGate = this.EnableVad ? new VadGate(this.VadAggressiveness) : null;
 
-            _waveIn = new WaveInEvent
+            this._waveIn = new WaveInEvent
             {
                 WaveFormat = new WaveFormat(AudioConstants.SampleRate, AudioConstants.BitsPerSample, AudioConstants.Channels),
                 BufferMilliseconds = AudioConstants.FrameMilliseconds,
             };
-            _waveIn.DataAvailable += OnDataAvailable;
-            _waveIn.RecordingStopped += OnRecordingStopped;
+            this._waveIn.DataAvailable += this.OnDataAvailable;
+            this._waveIn.RecordingStopped += this.OnRecordingStopped;
 
-            _startUtc = DateTime.UtcNow;
-            IsRecording = true;
-            _waveIn.StartRecording();
+            this._startUtc = DateTime.UtcNow;
+            this.IsRecording = true;
+            this._waveIn.StartRecording();
             return Task.CompletedTask;
         }
 
@@ -78,10 +78,10 @@ namespace Sample.Client.Unary.Audio
         /// </summary>
         public Task StopAsync()
         {
-            if (!IsRecording) return Task.CompletedTask;
+            if (!this.IsRecording) return Task.CompletedTask;
             var tcs = new TaskCompletionSource<object>();
-            _stopTcs = tcs;
-            _waveIn?.StopRecording();
+            this._stopTcs = tcs;
+            this._waveIn?.StopRecording();
             return tcs.Task;
         }
 
@@ -96,19 +96,19 @@ namespace Sample.Client.Unary.Audio
 
                 AudioFrameAvailable?.Invoke(this, new AudioFrameEventArgs(pcm, sampleCount));
 
-                if (_vadGate != null)
+                if (this._vadGate != null)
                 {
-                    _vadGate.Process(pcm, sampleCount, (buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                    this._vadGate.Process(pcm, sampleCount, (buf, n) => this._oggWriter.WriteSamples(buf, 0, n));
                 }
                 else
                 {
-                    _oggWriter.WriteSamples(pcm, 0, sampleCount);
+                    this._oggWriter.WriteSamples(pcm, 0, sampleCount);
                 }
             }
             catch (Exception ex)
             {
                 RecordingFailed?.Invoke(this, ex);
-                _waveIn?.StopRecording();
+                this._waveIn?.StopRecording();
             }
         }
 
@@ -118,13 +118,13 @@ namespace Sample.Client.Unary.Audio
             try
             {
                 // 1) VAD ゲートが Open 状態の端数フレームを先に吐き出す (Finish 後は WriteSamples 不可)。
-                _vadGate?.Flush((buf, n) => _oggWriter.WriteSamples(buf, 0, n));
+                this._vadGate?.Flush((buf, n) => this._oggWriter.WriteSamples(buf, 0, n));
 
                 // 2) Ogg トレーラを書き出す。残サンプルがパディングされて _buffer に書き込まれる。
-                _oggWriter?.Finish();
+                this._oggWriter?.Finish();
 
                 // 2) MemoryStream の中身を独立した byte[] にコピー (この後 _buffer を Dispose しても安全)。
-                byte[] bytes = _buffer != null ? _buffer.ToArray() : Array.Empty<byte>();
+                byte[] bytes = this._buffer != null ? this._buffer.ToArray() : Array.Empty<byte>();
 
                 if (e.Exception != null)
                 {
@@ -141,7 +141,7 @@ namespace Sample.Client.Unary.Audio
                 }
 
                 // 3) Unary で一括送信し、サーバー応答 (= 保存完了) を待つ。
-                var result = await _service.SaveUnary(new SaveUnaryRequest { OggOpusBytes = bytes });
+                var result = await this._service.SaveUnary(new SaveUnaryRequest { OggOpusBytes = bytes });
                 RecordingFinished?.Invoke(this, result);
             }
             catch (Exception ex)
@@ -151,10 +151,10 @@ namespace Sample.Client.Unary.Audio
             }
             finally
             {
-                IsRecording = false;
-                CleanUp();
-                var tcs = _stopTcs;
-                _stopTcs = null;
+                this.IsRecording = false;
+                this.CleanUp();
+                var tcs = this._stopTcs;
+                this._stopTcs = null;
                 if (tcs != null)
                 {
                     if (captured != null) tcs.TrySetException(captured);
@@ -165,24 +165,24 @@ namespace Sample.Client.Unary.Audio
 
         private void CleanUp()
         {
-            try { _waveIn?.Dispose(); } catch { }
-            _waveIn = null;
-            try { _vadGate?.Dispose(); } catch { }
-            _vadGate = null;
-            try { _buffer?.Dispose(); } catch { }
-            _buffer = null;
-            _oggWriter = null;
-            _encoder = null;
+            try { this._waveIn?.Dispose(); } catch { }
+            this._waveIn = null;
+            try { this._vadGate?.Dispose(); } catch { }
+            this._vadGate = null;
+            try { this._buffer?.Dispose(); } catch { }
+            this._buffer = null;
+            this._oggWriter = null;
+            this._encoder = null;
         }
 
         public void Dispose()
         {
-            if (IsRecording)
+            if (this.IsRecording)
             {
-                try { _waveIn?.StopRecording(); } catch { }
+                try { this._waveIn?.StopRecording(); } catch { }
                 // 注意: フォーム閉じ等で呼ばれる経路。OnRecordingStopped の送信完了は待たない。
             }
-            CleanUp();
+            this.CleanUp();
         }
     }
 }

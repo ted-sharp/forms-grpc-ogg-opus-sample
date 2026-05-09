@@ -12,22 +12,22 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
 
     public RecordingService(IRecordingStore store, ILogger<RecordingService> logger)
     {
-        _store = store;
-        _logger = logger;
+        this._store = store;
+        this._logger = logger;
     }
 
     public async Task<ClientStreamingResult<RecordingChunk, RecordingResult>> SaveStreaming()
     {
         // GetClientStreamingContext は MagicOnion v7 が提供する「クライアントからのストリームを受け取り始める」合図。
         // これを取得した時点で gRPC レイヤーが受信状態に入る。
-        var streamingContext = GetClientStreamingContext<RecordingChunk, RecordingResult>();
+        var streamingContext = this.GetClientStreamingContext<RecordingChunk, RecordingResult>();
 
         long total = 0;
         try
         {
             // サーバーは Opus も Ogg も解釈しない。受け取った byte[] をそのままファイルへ追記するだけ。
             // これは v4↔v7 の API 差異を最小化するための意図的な設計 (CLAUDE.md 参照)。
-            await using (var output = _store.OpenWrite())
+            await using (var output = this._store.OpenWrite())
             {
                 // v7 の受信ループ: MoveNext が false を返すまで Current にチャンクが入ってくる。
                 // (v4 にあった ReadAllAsync は v7 で廃止されているのでこの形で書く)
@@ -42,18 +42,18 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
                 }
             }
 
-            _logger.LogInformation("SaveStreaming: wrote {Bytes} bytes to {Path}", total, _store.SavedPath);
+            this._logger.LogInformation("SaveStreaming: wrote {Bytes} bytes to {Path}", total, this._store.SavedPath);
 
             return streamingContext.Result(new RecordingResult
             {
                 Success = true,
-                SavedPath = _store.SavedPath,
+                SavedPath = this._store.SavedPath,
                 ByteSize = total,
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SaveStreaming failed");
+            this._logger.LogError(ex, "SaveStreaming failed");
             return streamingContext.Result(new RecordingResult
             {
                 Success = false,
@@ -67,20 +67,20 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
         try
         {
             var bytes = request?.OggOpusBytes ?? Array.Empty<byte>();
-            await _store.WriteAllAsync(bytes);
+            await this._store.WriteAllAsync(bytes);
 
-            _logger.LogInformation("SaveUnary: wrote {Bytes} bytes to {Path}", bytes.Length, _store.SavedPath);
+            this._logger.LogInformation("SaveUnary: wrote {Bytes} bytes to {Path}", bytes.Length, this._store.SavedPath);
 
             return new RecordingResult
             {
                 Success = true,
-                SavedPath = _store.SavedPath,
+                SavedPath = this._store.SavedPath,
                 ByteSize = bytes.Length,
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SaveUnary failed");
+            this._logger.LogError(ex, "SaveUnary failed");
             return new RecordingResult
             {
                 Success = false,
@@ -95,7 +95,7 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
         // 引数自体は「v4 クライアントが空引数 Unary を bin8 で送って v7 サーバー側のデシリアライズが
         // 失敗する」問題を避けるためのダミーで、省略はできない。詳細は DownloadRequest 参照。
         _ = request;
-        var bytes = await _store.ReadAllAsync();
+        var bytes = await this._store.ReadAllAsync();
         return new DownloadResult
         {
             Exists = bytes is { Length: > 0 },

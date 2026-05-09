@@ -68,7 +68,7 @@ namespace Sample.Client.Stt.Stt
                     stream.AcceptWaveform(16000, input.Pcm16kMono);
                     ct.ThrowIfCancellationRequested();
                     this._recognizer.Decode(stream);
-                    return stream.Result.Text ?? string.Empty;
+                    return stream.Result.Text ?? String.Empty;
                 }
             }, ct);
         }

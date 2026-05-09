@@ -17,123 +17,123 @@ namespace Sample.Client.Unary
 
         public MainForm()
         {
-            InitializeComponent();
+            this.InitializeComponent();
 
             var host = ConfigurationManager.AppSettings["Server.Host"];
-            if (string.IsNullOrEmpty(host)) host = "localhost";
-            if (!int.TryParse(ConfigurationManager.AppSettings["Server.Port"], out var port)) port = 5000;
-            _rpc = new RecordingClient(host, port);
-            _recorder = new UnaryRecorder();
-            _player = new Player();
+            if (String.IsNullOrEmpty(host)) host = "localhost";
+            if (!Int32.TryParse(ConfigurationManager.AppSettings["Server.Port"], out var port)) port = 5000;
+            this._rpc = new RecordingClient(host, port);
+            this._recorder = new UnaryRecorder();
+            this._player = new Player();
 
-            _recorder.RecordingFinished += Recorder_RecordingFinished;
-            _recorder.RecordingFailed += Recorder_RecordingFailed;
-            _recorder.AudioFrameAvailable += Recorder_AudioFrameAvailable;
-            _player.PlaybackStopped += Player_PlaybackStopped;
+            this._recorder.RecordingFinished += this.Recorder_RecordingFinished;
+            this._recorder.RecordingFailed += this.Recorder_RecordingFailed;
+            this._recorder.AudioFrameAvailable += this.Recorder_AudioFrameAvailable;
+            this._player.PlaybackStopped += this.Player_PlaybackStopped;
 
-            _uiTimer = new Timer { Interval = 100 };
-            _uiTimer.Tick += UiTimer_Tick;
-            _uiTimer.Start();
+            this._uiTimer = new Timer { Interval = 100 };
+            this._uiTimer.Tick += this.UiTimer_Tick;
+            this._uiTimer.Start();
 
-            UpdateVadLabel();
-            UpdateUi();
+            this.UpdateVadLabel();
+            this.UpdateUi();
         }
 
         private void tbVadAggressiveness_ValueChanged(object sender, EventArgs e)
         {
-            UpdateVadLabel();
+            this.UpdateVadLabel();
         }
 
         private void UpdateVadLabel()
         {
-            switch (tbVadAggressiveness.Value)
+            switch (this.tbVadAggressiveness.Value)
             {
-                case 0: lblVadAggressiveness.Text = "ゆるめ"; break;
-                case 1: lblVadAggressiveness.Text = "ふつう"; break;
-                case 2: lblVadAggressiveness.Text = "強め"; break;
-                case 3: lblVadAggressiveness.Text = "最強"; break;
+                case 0: this.lblVadAggressiveness.Text = "ゆるめ"; break;
+                case 1: this.lblVadAggressiveness.Text = "ふつう"; break;
+                case 2: this.lblVadAggressiveness.Text = "強め"; break;
+                case 3: this.lblVadAggressiveness.Text = "最強"; break;
             }
         }
 
         private async void btnRecord_Click(object sender, EventArgs e)
         {
-            if (_recorder.IsRecording) return;
+            if (this._recorder.IsRecording) return;
 
             try
             {
-                _player.Stop();
-                SetStatus("録音開始中...");
-                _recorder.EnableVad = chkRemoveSilence.Checked;
-                _recorder.VadAggressiveness = tbVadAggressiveness.Value;
-                waveformView.Reset();
-                await _recorder.StartAsync(_rpc.Service);
-                SetStatus("録音中");
-                UpdateUi();
+                this._player.Stop();
+                this.SetStatus("録音開始中...");
+                this._recorder.EnableVad = this.chkRemoveSilence.Checked;
+                this._recorder.VadAggressiveness = this.tbVadAggressiveness.Value;
+                this.waveformView.Reset();
+                await this._recorder.StartAsync(this._rpc.Service);
+                this.SetStatus("録音中");
+                this.UpdateUi();
             }
             catch (Exception ex)
             {
-                SetStatus("録音開始エラー: " + ex.Message);
+                this.SetStatus("録音開始エラー: " + ex.Message);
                 MessageBox.Show(this, ex.ToString(), "録音開始エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private async void btnPlay_Click(object sender, EventArgs e)
         {
-            if (_recorder.IsRecording) return;
+            if (this._recorder.IsRecording) return;
 
             try
             {
-                if (_player.IsPaused)
+                if (this._player.IsPaused)
                 {
-                    _player.Play();
-                    SetStatus("再生中");
-                    UpdateUi();
+                    this._player.Play();
+                    this.SetStatus("再生中");
+                    this.UpdateUi();
                     return;
                 }
 
-                if (!_player.IsLoaded)
+                if (!this._player.IsLoaded)
                 {
-                    SetStatus("サーバーから取得中...");
-                    btnPlay.Enabled = false;
-                    await _player.LoadAsync(_rpc.Service);
-                    btnPlay.Enabled = true;
+                    this.SetStatus("サーバーから取得中...");
+                    this.btnPlay.Enabled = false;
+                    await this._player.LoadAsync(this._rpc.Service);
+                    this.btnPlay.Enabled = true;
                 }
 
-                if (_player.IsLoaded)
+                if (this._player.IsLoaded)
                 {
-                    _player.CurrentTime = TimeSpan.Zero;
-                    _player.Play();
-                    SetStatus("再生中");
-                    UpdateUi();
+                    this._player.CurrentTime = TimeSpan.Zero;
+                    this._player.Play();
+                    this.SetStatus("再生中");
+                    this.UpdateUi();
                 }
             }
             catch (Exception ex)
             {
-                btnPlay.Enabled = true;
-                SetStatus("再生エラー: " + ex.Message);
+                this.btnPlay.Enabled = true;
+                this.SetStatus("再生エラー: " + ex.Message);
                 MessageBox.Show(this, ex.ToString(), "再生エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void btnPause_Click(object sender, EventArgs e)
         {
-            if (_player.IsPlaying)
+            if (this._player.IsPlaying)
             {
-                _player.Pause();
-                SetStatus("一時停止");
-                UpdateUi();
+                this._player.Pause();
+                this.SetStatus("一時停止");
+                this.UpdateUi();
             }
         }
 
         private async void btnStop_Click(object sender, EventArgs e)
         {
-            if (_recorder.IsRecording)
+            if (this._recorder.IsRecording)
             {
-                SetStatus("録音停止処理中 (サーバー送信完了待ち)...");
-                btnStop.Enabled = false;
+                this.SetStatus("録音停止処理中 (サーバー送信完了待ち)...");
+                this.btnStop.Enabled = false;
                 try
                 {
-                    await _recorder.StopAsync();
+                    await this._recorder.StopAsync();
                 }
                 catch
                 {
@@ -141,84 +141,84 @@ namespace Sample.Client.Unary
                 }
                 finally
                 {
-                    UpdateUi();
+                    this.UpdateUi();
                 }
                 return;
             }
-            if (_player.IsPlaying || _player.IsPaused)
+            if (this._player.IsPlaying || this._player.IsPaused)
             {
-                _player.Stop();
-                SetStatus("待機中");
-                UpdateUi();
+                this._player.Stop();
+                this.SetStatus("待機中");
+                this.UpdateUi();
             }
         }
 
-        private void tbSeek_MouseDown(object sender, MouseEventArgs e) => _seeking = true;
+        private void tbSeek_MouseDown(object sender, MouseEventArgs e) => this._seeking = true;
 
         private void tbSeek_MouseUp(object sender, MouseEventArgs e)
         {
-            ApplySeek();
-            _seeking = false;
+            this.ApplySeek();
+            this._seeking = false;
         }
 
         private void tbSeek_Scroll(object sender, EventArgs e)
         {
-            if (_seeking) return;
-            ApplySeek();
+            if (this._seeking) return;
+            this.ApplySeek();
         }
 
         private void ApplySeek()
         {
-            if (!_player.IsLoaded) return;
-            var total = _player.TotalTime;
+            if (!this._player.IsLoaded) return;
+            var total = this._player.TotalTime;
             if (total <= TimeSpan.Zero) return;
-            var ratio = tbSeek.Value / (double)tbSeek.Maximum;
-            _player.CurrentTime = TimeSpan.FromSeconds(total.TotalSeconds * ratio);
+            var ratio = this.tbSeek.Value / (double)this.tbSeek.Maximum;
+            this._player.CurrentTime = TimeSpan.FromSeconds(total.TotalSeconds * ratio);
         }
 
         private void Recorder_RecordingFinished(object sender, RecordingResult result)
         {
-            if (InvokeRequired)
+            if (this.InvokeRequired)
             {
-                BeginInvoke(new Action(() => Recorder_RecordingFinished(sender, result)));
+                this.BeginInvoke(new Action(() => this.Recorder_RecordingFinished(sender, result)));
                 return;
             }
             if (result != null && result.Success)
             {
-                SetStatus($"録音完了 ({result.ByteSize:N0} byte) → {result.SavedPath}");
+                this.SetStatus($"録音完了 ({result.ByteSize:N0} byte) → {result.SavedPath}");
             }
             else
             {
-                SetStatus("録音失敗: " + (result?.ErrorMessage ?? "(不明)"));
+                this.SetStatus("録音失敗: " + (result?.ErrorMessage ?? "(不明)"));
             }
-            UpdateUi();
+            this.UpdateUi();
         }
 
         private void Recorder_RecordingFailed(object sender, Exception ex)
         {
-            if (InvokeRequired)
+            if (this.InvokeRequired)
             {
-                BeginInvoke(new Action(() => Recorder_RecordingFailed(sender, ex)));
+                this.BeginInvoke(new Action(() => this.Recorder_RecordingFailed(sender, ex)));
                 return;
             }
-            SetStatus("録音エラー: " + ex.Message);
-            UpdateUi();
+            this.SetStatus("録音エラー: " + ex.Message);
+            this.UpdateUi();
         }
 
         private void Recorder_AudioFrameAvailable(object sender, Sample.Client.Unary.Audio.AudioFrameEventArgs e)
         {
             // NAudio のキャプチャスレッドから呼ばれるので UI スレッドへマーシャルする。
             // 高頻度 (20 ms ごと) なので Invoke ではなく BeginInvoke を使い、フォーム破棄後の例外は無視。
-            if (IsDisposed) return;
+            if (this.IsDisposed) return;
             try
             {
-                if (InvokeRequired)
+                if (this.InvokeRequired)
                 {
-                    BeginInvoke(new Action(() => waveformView.AddPcm(e.Pcm, e.SampleCount)));
+                    this.BeginInvoke(new Action(() => this.waveformView.AddPcm(e.Pcm, e.SampleCount)));
                 }
                 else
                 {
-                    waveformView.AddPcm(e.Pcm, e.SampleCount);
+                    this.waveformView.AddPcm(e.Pcm, e.SampleCount);
                 }
             }
             catch (ObjectDisposedException) { }
@@ -227,67 +227,67 @@ namespace Sample.Client.Unary
 
         private void Player_PlaybackStopped(object sender, EventArgs e)
         {
-            if (InvokeRequired)
+            if (this.InvokeRequired)
             {
-                BeginInvoke(new Action(() => Player_PlaybackStopped(sender, e)));
+                this.BeginInvoke(new Action(() => this.Player_PlaybackStopped(sender, e)));
                 return;
             }
-            SetStatus("待機中");
-            UpdateUi();
+            this.SetStatus("待機中");
+            this.UpdateUi();
         }
 
         private void UiTimer_Tick(object sender, EventArgs e)
         {
-            if (_recorder.IsRecording)
+            if (this._recorder.IsRecording)
             {
-                var elapsed = _recorder.Elapsed;
-                lblTime.Text = $"録音中 {Format(elapsed)}";
+                var elapsed = this._recorder.Elapsed;
+                this.lblTime.Text = $"録音中 {Format(elapsed)}";
             }
-            else if (_player.IsLoaded)
+            else if (this._player.IsLoaded)
             {
-                if (!_seeking)
+                if (!this._seeking)
                 {
-                    var total = _player.TotalTime;
-                    var current = _player.CurrentTime;
-                    lblTime.Text = $"{Format(current)} / {Format(total)}";
+                    var total = this._player.TotalTime;
+                    var current = this._player.CurrentTime;
+                    this.lblTime.Text = $"{Format(current)} / {Format(total)}";
                     if (total > TimeSpan.Zero)
                     {
                         var ratio = current.TotalSeconds / total.TotalSeconds;
-                        var newValue = (int)(ratio * tbSeek.Maximum);
-                        if (newValue < tbSeek.Minimum) newValue = tbSeek.Minimum;
-                        if (newValue > tbSeek.Maximum) newValue = tbSeek.Maximum;
-                        if (newValue != tbSeek.Value) tbSeek.Value = newValue;
+                        var newValue = (int)(ratio * this.tbSeek.Maximum);
+                        if (newValue < this.tbSeek.Minimum) newValue = this.tbSeek.Minimum;
+                        if (newValue > this.tbSeek.Maximum) newValue = this.tbSeek.Maximum;
+                        if (newValue != this.tbSeek.Value) this.tbSeek.Value = newValue;
                     }
                 }
             }
             else
             {
-                lblTime.Text = "00:00 / 00:00";
+                this.lblTime.Text = "00:00 / 00:00";
             }
         }
 
         private void UpdateUi()
         {
-            if (InvokeRequired) { BeginInvoke(new Action(UpdateUi)); return; }
+            if (this.InvokeRequired) { this.BeginInvoke(new Action(this.UpdateUi)); return; }
 
-            bool recording = _recorder.IsRecording;
-            bool playing = _player.IsPlaying;
-            bool paused = _player.IsPaused;
-            bool loaded = _player.IsLoaded;
+            bool recording = this._recorder.IsRecording;
+            bool playing = this._player.IsPlaying;
+            bool paused = this._player.IsPaused;
+            bool loaded = this._player.IsLoaded;
 
-            btnRecord.Enabled = !recording && !playing && !paused;
-            btnPlay.Enabled = !recording && !playing;
-            btnPause.Enabled = !recording && playing;
-            btnStop.Enabled = recording || playing || paused;
-            tbSeek.Enabled = !recording && loaded;
-            chkRemoveSilence.Enabled = !recording;
-            tbVadAggressiveness.Enabled = !recording;
+            this.btnRecord.Enabled = !recording && !playing && !paused;
+            this.btnPlay.Enabled = !recording && !playing;
+            this.btnPause.Enabled = !recording && playing;
+            this.btnStop.Enabled = recording || playing || paused;
+            this.tbSeek.Enabled = !recording && loaded;
+            this.chkRemoveSilence.Enabled = !recording;
+            this.tbVadAggressiveness.Enabled = !recording;
         }
 
         private void SetStatus(string text)
         {
-            if (InvokeRequired) { BeginInvoke(new Action(() => SetStatus(text))); return; }
-            lblStatus.Text = "状態: " + text;
+            if (this.InvokeRequired) { this.BeginInvoke(new Action(() => this.SetStatus(text))); return; }
+            this.lblStatus.Text = "状態: " + text;
         }
 
         private static string Format(TimeSpan ts)
@@ -299,17 +299,17 @@ namespace Sample.Client.Unary
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
-            try { _uiTimer?.Stop(); } catch { }
-            try { _recorder?.Dispose(); } catch { }
-            try { _player?.Dispose(); } catch { }
-            try { _rpc?.Dispose(); } catch { }
+            try { this._uiTimer?.Stop(); } catch { }
+            try { this._recorder?.Dispose(); } catch { }
+            try { this._player?.Dispose(); } catch { }
+            try { this._rpc?.Dispose(); } catch { }
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                components?.Dispose();
+                this.components?.Dispose();
             }
             base.Dispose(disposing);
         }

@@ -27,12 +27,12 @@ namespace Sample.Client.Stt.Stt
         public async Task<string> TranscribeAsync(AudioInput input, IProgress<string> progress, CancellationToken ct)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
-            if (string.IsNullOrEmpty(this._settings.Azure.Key))
+            if (String.IsNullOrEmpty(this._settings.Azure.Key))
             {
                 throw new InvalidOperationException(
                     "Azure キーが未設定です。AZURE_SPEECH_KEY 環境変数か appsettings.json の Azure:Key を設定してください。");
             }
-            if (string.IsNullOrEmpty(this._settings.Azure.Region))
+            if (String.IsNullOrEmpty(this._settings.Azure.Region))
             {
                 throw new InvalidOperationException(
                     "Azure リージョンが未設定です。AZURE_SPEECH_REGION 環境変数か appsettings.json の Azure:Region を設定してください。");
@@ -49,7 +49,7 @@ namespace Sample.Client.Stt.Stt
 
                 recognizer.Recognized += (s, e) =>
                 {
-                    if (e.Result.Reason == ResultReason.RecognizedSpeech && !string.IsNullOrEmpty(e.Result.Text))
+                    if (e.Result.Reason == ResultReason.RecognizedSpeech && !String.IsNullOrEmpty(e.Result.Text))
                     {
                         sb.AppendLine(e.Result.Text);
                         progress?.Report(e.Result.Text);

@@ -24,8 +24,8 @@ namespace Sample.Client.Stt.Audio
             for (var i = 0; i < pcm16kMono.Length; i++)
             {
                 var v = (int)Math.Round(pcm16kMono[i] * 32767f);
-                if (v > short.MaxValue) v = short.MaxValue;
-                if (v < short.MinValue) v = short.MinValue;
+                if (v > Int16.MaxValue) v = Int16.MaxValue;
+                if (v < Int16.MinValue) v = Int16.MinValue;
                 var s = (short)v;
                 byteBuffer[i * 2] = (byte)(s & 0xFF);
                 byteBuffer[i * 2 + 1] = (byte)((s >> 8) & 0xFF);
