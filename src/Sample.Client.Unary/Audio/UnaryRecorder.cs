@@ -32,7 +32,7 @@ namespace Sample.Client.Unary.Audio
         public bool EnableVad { get; set; }
 
         /// <summary>WebRTC VAD のアグレッシブ度 (0..3、3 が最も厳しい)。StartAsync 前に設定すること。</summary>
-        public int VadAggressiveness { get; set; } = 2;
+        public int VadAggressiveness { get; set; } = 0;
 
         public TimeSpan Elapsed => IsRecording ? DateTime.UtcNow - _startUtc : TimeSpan.Zero;
 

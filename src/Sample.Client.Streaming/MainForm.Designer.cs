@@ -133,7 +133,7 @@ namespace Sample.Client.Streaming
             this.tbVadAggressiveness.Size = new System.Drawing.Size(160, 45);
             this.tbVadAggressiveness.TabIndex = 9;
             this.tbVadAggressiveness.TickFrequency = 1;
-            this.tbVadAggressiveness.Value = 2;
+            this.tbVadAggressiveness.Value = 0;
             this.tbVadAggressiveness.ValueChanged += new System.EventHandler(this.tbVadAggressiveness_ValueChanged);
             //
             // lblVadAggressiveness
@@ -143,7 +143,7 @@ namespace Sample.Client.Streaming
             this.lblVadAggressiveness.Name = "lblVadAggressiveness";
             this.lblVadAggressiveness.Size = new System.Drawing.Size(60, 18);
             this.lblVadAggressiveness.TabIndex = 10;
-            this.lblVadAggressiveness.Text = "強め";
+            this.lblVadAggressiveness.Text = "ゆるめ";
             //
             // waveformView
             //
