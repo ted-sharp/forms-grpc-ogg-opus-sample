@@ -2,36 +2,35 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net48</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Sample.Client.Streaming</RootNamespace>
     <AssemblyName>Sample.Client.Streaming</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- WebRtcVadSharp は WebRtcVad.dll (ネイティブ) を要求する。
-         AnyCPU だと WebRtcVadSharp.targets が警告を出して既定 x64 を使うので、
-         明示的に x64 を指定して bin/ にネイティブ DLL を確実に配置する。 -->
+    <!-- WebRtcVadSharp は WebRtcVad.dll (ネイティブ) を要求する。AnyCPU では targets が
+         警告を出して既定 x64 を選ぶので、明示的に x64 を指定して bin/ にネイティブ DLL を確実に配置する。 -->
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- App.config の appSettings を読む ConfigurationManager 用 (net48 では明示参照が必要)。 -->
-    <Reference Include="System.Configuration" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MagicOnion.Client" Version="4.5.2" />
-    <PackageReference Include="Grpc.Core" Version="2.46.6" />
+    <PackageReference Include="MagicOnion.Client" Version="7.0.6" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Concentus" Version="1.1.7" />
     <PackageReference Include="Concentus.OggFile" Version="1.0.4" />
-    <!-- ネイティブ DLL を当 exe の bin にコピーさせるため Shared 経由でなく直接参照する。
-         Sample.Shared 側にも同じ参照があるのは VadGate.cs のコンパイル用。 -->
-    <PackageReference Include="WebRtcVadSharp" Version="1.3.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Sample.Shared\Sample.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

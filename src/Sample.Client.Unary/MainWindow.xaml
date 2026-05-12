@@ -1,0 +1,49 @@
+<Window x:Class="Sample.Client.Unary.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:Sample.Client.Unary.Ui"
+        Title="Sample.Client.Unary (Unary)"
+        Width="520" Height="360"
+        ResizeMode="CanMinimize"
+        FontSize="13">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Button x:Name="btnRecord" Content="● 録音" Width="96" Height="36" Click="btnRecord_Click" />
+            <Button x:Name="btnPlay" Content="▶ 再生" Width="96" Height="36" Margin="8,0,0,0" Click="btnPlay_Click" />
+            <Button x:Name="btnPause" Content="⏸ 一時停止" Width="96" Height="36" Margin="8,0,0,0" Click="btnPause_Click" />
+            <Button x:Name="btnStop" Content="■ 停止" Width="96" Height="36" Margin="8,0,0,0" Click="btnStop_Click" />
+        </StackPanel>
+
+        <Slider x:Name="tbSeek" Grid.Row="1" Margin="0,12,0,0"
+                Minimum="0" Maximum="1000" Value="0"
+                IsMoveToPointEnabled="True"
+                PreviewMouseDown="tbSeek_PreviewMouseDown"
+                PreviewMouseUp="tbSeek_PreviewMouseUp"
+                ValueChanged="tbSeek_ValueChanged" />
+
+        <TextBlock x:Name="lblTime" Grid.Row="2" Margin="0,6,0,0" Text="00:00 / 00:00" />
+
+        <TextBlock x:Name="lblStatus" Grid.Row="3" Margin="0,4,0,0" Text="状態: 待機中" />
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
+            <CheckBox x:Name="chkRemoveSilence" Content="無音をカットする (VAD)" VerticalAlignment="Center" />
+            <TextBlock Text="精度:" Margin="20,0,4,0" VerticalAlignment="Center" />
+            <Slider x:Name="tbVadAggressiveness" Width="160" VerticalAlignment="Center"
+                    Minimum="0" Maximum="3" Value="0"
+                    IsSnapToTickEnabled="True" TickFrequency="1" TickPlacement="BottomRight"
+                    ValueChanged="tbVadAggressiveness_ValueChanged" />
+            <TextBlock x:Name="lblVadAggressiveness" Text="ゆるめ" Margin="8,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <ui:WaveformView x:Name="waveformView" Grid.Row="5" Margin="0,12,0,0" />
+    </Grid>
+</Window>

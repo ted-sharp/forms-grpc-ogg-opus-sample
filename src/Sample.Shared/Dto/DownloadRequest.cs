@@ -1,18 +1,16 @@
 using MessagePack;
 
-namespace Sample.Shared.Dto
+namespace Sample.Shared.Dto;
+
+/// <summary>
+/// Download のダミー入力 DTO。単一ファイル前提のサンプルでは中身を使っていないが、
+/// 「引数 0 個の Unary」は MagicOnion / MessagePack の組合せで踏みやすい地雷なので、
+/// 念のため 1 個以上のフィールドを持つ DTO を引数に取らせている。将来 FileId 等を
+/// 渡したくなったときに拡張する場所。
+/// </summary>
+[MessagePackObject]
+public class DownloadRequest
 {
-    /// <summary>
-    /// MagicOnion v4 クライアントは「引数 0 個」のメソッドを bin 8 で送るため、
-    /// MagicOnion v7 サーバー側 (Nil 期待) と噛み合わずデシリアライズエラーになる。
-    /// 引数を 1 つ以上持たせれば通常のオブジェクト・シリアライズ経路に乗るので、
-    /// ダミーの DTO を導入してこれを回避する。
-    /// </summary>
-    [MessagePackObject]
-    public class DownloadRequest
-    {
-        // 現状のサンプルでは未使用。単一ファイル前提のため。
-        [Key(0)]
-        public string? FileId { get; set; }
-    }
+    [Key(0)]
+    public string? FileId { get; set; }
 }

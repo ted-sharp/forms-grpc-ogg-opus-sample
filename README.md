@@ -1,13 +1,14 @@
 # sample-wpf-grpc-ogg-opus
 
-WinForms から録音した音声を Ogg Opus に変換し、MagicOnion (gRPC) でサーバーに送って保存するサンプル。
+WPF から録音した音声を Ogg Opus に変換し、MagicOnion (gRPC) でサーバーに送って保存するサンプル。サーバー・クライアント・共有ライブラリすべて .NET 10 / MagicOnion v7 で揃えている。
 
 ## 構成
 
 - **Sample.Server** (net10.0) — 受信した音声を `recordings/recording.opus` に保存するだけ
-- **Sample.Client.Streaming** (net48) — ClientStreaming で逐次送信
-- **Sample.Client.Unary** (net48) — Unary で一括送信
-- **Sample.Shared** (netstandard2.0) — DTO とインターフェース定義
+- **Sample.Client.Streaming** (net10.0-windows / WPF) — ClientStreaming で逐次送信
+- **Sample.Client.Unary** (net10.0-windows / WPF) — Unary で一括送信
+- **Sample.Client.Stt** (net10.0-windows / WPF) — 保存済みファイルを取得して sherpa-onnx / Azure Speech で文字起こし
+- **Sample.Shared** (net10.0) — DTO とインターフェース定義 (`IRecordingService`)、`VadGate`、`AudioConstants`
 
 - **送信**: NAudio で録音 → (任意) WebRTC VAD で無音除去 → Concentus で Ogg Opus 化 → gRPC で送信
 - **受信**: gRPC でサーバーから Ogg Opus をダウンロード → Concentus でデコード → NAudio で再生 (再生・一時停止・停止・シーク対応)
@@ -36,9 +37,10 @@ dotnet build Sample.slnx
 # サーバー (http://0.0.0.0:5000)
 dotnet run --project src/Sample.Server/Sample.Server.csproj
 
-# クライアント (どちらか)
+# クライアント (いずれか)
 dotnet run --project src/Sample.Client.Streaming/Sample.Client.Streaming.csproj
 dotnet run --project src/Sample.Client.Unary/Sample.Client.Unary.csproj
+dotnet run --project src/Sample.Client.Stt/Sample.Client.Stt.csproj
 ```
 
 ## 詳細

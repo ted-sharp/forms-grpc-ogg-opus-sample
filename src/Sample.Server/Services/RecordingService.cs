@@ -1,7 +1,8 @@
 using MagicOnion;
 using MagicOnion.Server;
-using Sample.Shared.Dto;
 using Sample.Server.Storage;
+using Sample.Shared;
+using Sample.Shared.Dto;
 
 namespace Sample.Server.Services;
 
@@ -26,11 +27,10 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
         try
         {
             // サーバーは Opus も Ogg も解釈しない。受け取った byte[] をそのままファイルへ追記するだけ。
-            // これは v4↔v7 の API 差異を最小化するための意図的な設計 (CLAUDE.md 参照)。
+            // Opus/Ogg の知識はクライアント側に閉じ込めて、サーバー側ロジックを単純化している。
             await using (var output = this._store.OpenWrite())
             {
-                // v7 の受信ループ: MoveNext が false を返すまで Current にチャンクが入ってくる。
-                // (v4 にあった ReadAllAsync は v7 で廃止されているのでこの形で書く)
+                // MoveNext が false を返すまで Current にチャンクが入ってくる。
                 while (await streamingContext.MoveNext())
                 {
                     var chunk = streamingContext.Current;
@@ -91,9 +91,7 @@ public class RecordingService : ServiceBase<IRecordingService>, IRecordingServic
 
     public async UnaryResult<DownloadResult> Download(DownloadRequest request)
     {
-        // request.FileId は単一ファイル前提のサンプルなので未使用。
-        // 引数自体は「v4 クライアントが空引数 Unary を bin8 で送って v7 サーバー側のデシリアライズが
-        // 失敗する」問題を避けるためのダミーで、省略はできない。詳細は DownloadRequest 参照。
+        // request.FileId は単一ファイル前提のサンプルなので未使用。引数自体は将来の拡張余地。
         _ = request;
         var bytes = await this._store.ReadAllAsync();
         return new DownloadResult

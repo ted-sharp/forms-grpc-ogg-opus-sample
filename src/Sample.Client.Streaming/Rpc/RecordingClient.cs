@@ -1,48 +1,51 @@
-using System;
-using System.Threading.Tasks;
-using Grpc.Core;
+using Grpc.Net.Client;
 using MagicOnion.Client;
 using Sample.Shared;
 
-namespace Sample.Client.Streaming.Rpc
+namespace Sample.Client.Streaming.Rpc;
+
+/// <summary>
+/// MagicOnion v7 + Grpc.Net.Client (.NET 10) でサーバーへ接続する RPC クライアント。
+/// h2c での接続は App.xaml.cs で <c>Http2UnencryptedSupport</c> スイッチを有効にしている前提。
+/// </summary>
+public sealed class RecordingClient : IDisposable
 {
-    public sealed class RecordingClient : IDisposable
+    private readonly GrpcChannel _channel;
+
+    public RecordingClient(string host = "localhost", int port = 5000)
     {
-        private readonly Channel _channel;
-
-        public RecordingClient(string host = "localhost", int port = 5000)
+        var address = $"http://{host}:{port}";
+        this._channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions
         {
-            var options = new[]
-            {
-                new ChannelOption(ChannelOptions.MaxReceiveMessageLength, 64 * 1024 * 1024),
-                new ChannelOption(ChannelOptions.MaxSendMessageLength, 64 * 1024 * 1024),
-            };
-            this._channel = new Channel(host, port, ChannelCredentials.Insecure, options);
-            this.Service = MagicOnionClient.Create<IRecordingService>(this._channel);
+            // サーバー側と同じ 64 MB に揃える (Download で長尺ファイルが返るケース用)。
+            MaxReceiveMessageSize = 64 * 1024 * 1024,
+            MaxSendMessageSize = 64 * 1024 * 1024,
+        });
+        this.Service = MagicOnionClient.Create<IRecordingService>(this._channel);
+    }
+
+    public IRecordingService Service { get; }
+
+    /// <summary>
+    /// HTTP/2 コネクションを事前に確立する。録音開始の最初の ClientStreaming WriteAsync が
+    /// コネクション確立待ちで遅延するのを避ける目的で、念のため事前接続させている。
+    /// </summary>
+    public async Task ConnectAsync(TimeSpan? timeout = null)
+    {
+        using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
+        await this._channel.ConnectAsync(cts.Token).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            this._channel.ShutdownAsync().GetAwaiter().GetResult();
+            this._channel.Dispose();
         }
-
-        public IRecordingService Service { get; }
-
-        /// <summary>
-        /// HTTP/2 コネクションを事前に確立する。ClientStreaming で初回 WriteAsync が
-        /// 遅延した場合に gRPC.Core が状態を不安定にすることを避ける目的。
-        /// </summary>
-        public Task ConnectAsync(TimeSpan? deadline = null)
+        catch
         {
-            var dl = DateTime.UtcNow.Add(deadline ?? TimeSpan.FromSeconds(5));
-            return this._channel.ConnectAsync(dl);
-        }
-
-        public void Dispose()
-        {
-            try
-            {
-                this._channel.ShutdownAsync().GetAwaiter().GetResult();
-            }
-            catch
-            {
-                // ignore shutdown errors
-            }
+            // ignore shutdown errors
         }
     }
 }

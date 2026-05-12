@@ -4,32 +4,31 @@
 
 NAudio で録音した音声を Concentus で Opus エンコードし、MagicOnion (gRPC) でサーバーへ送信、サーバー側で Ogg Opus ファイルとして保存するクラサバ構成のサンプルアプリケーション。クライアントから保存済みファイルを取得して再生・シーク操作も行う。
 
-通信パターンの学習を目的に、ClientStreaming 版と Unary 版の 2 種類のクライアントを用意する (サーバーは共通)。任意機能として、WebRTC VAD で無音区間を録音時に削るパスを両クライアントに用意している。
+通信パターンの学習を目的に、ClientStreaming 版と Unary 版の 2 種類のクライアントを用意する (サーバーは共通)。任意機能として、WebRTC VAD で無音区間を録音時に削るパスを両クライアントに用意している。さらに保存済みファイルを取得して STT (sherpa-onnx / Azure Speech) で文字起こしする 3 つ目のクライアントを同梱している。
 
 ## 2. アーキテクチャ
 
 ```
 ┌─────────────────────────────┐         ┌───────────────────────────┐
-│ Client (.NET Framework 4.8) │         │ Server (.NET 10)          │
-│  Windows Forms              │         │  ASP.NET Core +           │
-│  ┌────────────────────┐     │  HTTP/2 │  MagicOnion v7            │
-│  │ NAudio 録音         │     │ ◄─────► │  ┌─────────────────────┐ │
-│  │  ↓ PCM 16-bit       │     │  gRPC   │  │ IRecordingService   │ │
-│  │ (任意) WebRTC VAD   │     │         │  │  - SaveStreaming    │ │
-│  │  ↓ voice 区間のみ    │     │         │  │  - SaveUnary        │ │
-│  │ Concentus エンコード│     │         │  │  - Download         │ │
-│  │ Concentus.Oggfile   │     │         │  └─────────────────────┘ │
-│  │  ↓ Ogg Opus bytes   │     │         │  ┌─────────────────────┐ │
-│  │ MagicOnion v4       │     │         │  │ FileSystem          │ │
-│  │  (Grpc.Core)        │     │         │  │  → recording.opus   │ │
-│  └────────────────────┘     │         │  │  (Opus/Ogg は       │ │
-│  ┌────────────────────┐     │         │  │   非依存。バイト    │ │
-│  │ NAudio 再生 (DL後)  │     │         │  │   をそのまま書く)   │ │
-│  └────────────────────┘     │         │  └─────────────────────┘ │
+│ Client (.NET 10, WPF, x64)  │         │ Server (.NET 10)          │
+│  ┌────────────────────┐     │  HTTP/2 │  ASP.NET Core +           │
+│  │ NAudio 録音         │     │  (h2c)  │  MagicOnion v7            │
+│  │  ↓ PCM 16-bit       │     │ ◄─────► │  ┌─────────────────────┐ │
+│  │ (任意) WebRTC VAD   │     │  gRPC   │  │ IRecordingService   │ │
+│  │  ↓ voice 区間のみ    │     │         │  │  - SaveStreaming    │ │
+│  │ Concentus エンコード│     │         │  │  - SaveUnary        │ │
+│  │ Concentus.Oggfile   │     │         │  │  - Download         │ │
+│  │  ↓ Ogg Opus bytes   │     │         │  └─────────────────────┘ │
+│  │ MagicOnion v7       │     │         │  ┌─────────────────────┐ │
+│  │  (Grpc.Net.Client)  │     │         │  │ FileSystem          │ │
+│  └────────────────────┘     │         │  │  → recording.opus   │ │
+│  ┌────────────────────┐     │         │  │  (Opus/Ogg は       │ │
+│  │ NAudio 再生 (DL後)  │     │         │  │   非依存。バイト    │ │
+│  └────────────────────┘     │         │  │   をそのまま書く)   │ │
 └─────────────────────────────┘         └───────────────────────────┘
 ```
 
-サーバーは Opus も Ogg も一切意識しない。クライアント側で Ogg Opus コンテナまで組み立てて送り、サーバーは届いたバイトを単一ファイルに書くだけ。これは MagicOnion v4 ↔ v7 の API 差異の影響を受ける箇所をクライアントに閉じ込めるための意図的な分担。
+サーバーは Opus も Ogg も一切意識しない。クライアント側で Ogg Opus コンテナまで組み立てて送り、サーバーは届いたバイトを単一ファイルに書くだけ。サンプルとして「サービスの責務をどこで切るか」を見せるための意図的な分担で、技術的な制約から来るものではない。
 
 ## 3. プロジェクト構成
 
@@ -37,10 +36,11 @@ NAudio で録音した音声を Concentus で Opus エンコードし、MagicOni
 sample-wpf-grpc-ogg-opus/
 ├── Sample.slnx                          (.NET 10 SDK の XML 形式ソリューション)
 └── src/
-    ├── Sample.Shared/                   netstandard2.0   サービス契約 + DTO + VadGate + AudioConstants
-    ├── Sample.Server/                   net10.0          MagicOnion v7 サーバー
-    ├── Sample.Client.Streaming/         net48            ClientStreaming 版 WinForms
-    └── Sample.Client.Unary/             net48            Unary 版 WinForms
+    ├── Sample.Shared/                   net10.0               サービス契約 + DTO + VadGate + AudioConstants
+    ├── Sample.Server/                   net10.0               MagicOnion v7 サーバー
+    ├── Sample.Client.Streaming/         net10.0-windows (WPF) ClientStreaming 版
+    ├── Sample.Client.Unary/             net10.0-windows (WPF) Unary 版
+    └── Sample.Client.Stt/               net10.0-windows (WPF) STT (sherpa-onnx / Azure) 版
 ```
 
 ソリューションファイルは従来の `.sln` ではなく `.slnx` (XML)。VS / dotnet CLI 双方が解釈可能。
@@ -49,44 +49,24 @@ sample-wpf-grpc-ogg-opus/
 
 | プロジェクト | TFM | 主要パッケージ |
 |---|---|---|
-| `Sample.Shared` | `netstandard2.0` | `MagicOnion.Abstractions` 4.5.2, `MessagePack` 2.5.187, `WebRtcVadSharp` 1.3.2 |
+| `Sample.Shared` | `net10.0` | `MagicOnion.Abstractions` 7.0.6, `MessagePack` 3.1.1, `WebRtcVadSharp` 1.3.2 |
 | `Sample.Server` | `net10.0` | `MagicOnion.Server` 7.0.6, `Grpc.AspNetCore` 2.71.0 |
-| `Sample.Client.Streaming` | `net48` | `MagicOnion.Client` 4.5.2, `Grpc.Core` 2.46.6, `NAudio` 2.2.1, `Concentus` 1.1.7, `Concentus.OggFile` 1.0.4, `WebRtcVadSharp` 1.3.2 |
-| `Sample.Client.Unary` | `net48` | 同上 |
+| `Sample.Client.Streaming` | `net10.0-windows` (WPF) | `MagicOnion.Client` 7.0.6, `Grpc.Net.Client` 2.71.0, `NAudio` 2.2.1, `Concentus` 1.1.7, `Concentus.OggFile` 1.0.4 |
+| `Sample.Client.Unary` | `net10.0-windows` (WPF) | 同上 |
+| `Sample.Client.Stt` | `net10.0-windows` (WPF) | `MagicOnion.Client` 7.0.6, `Grpc.Net.Client` 2.71.0, `NAudio` 2.2.1, `Concentus` 1.1.7, `Concentus.OggFile` 1.0.4, `org.k2fsa.sherpa.onnx` 1.13.0, `Microsoft.CognitiveServices.Speech` 1.49.1 |
 
 注:
 
 - `Concentus` は 1.x 系を使用 (2.x は API が `OpusCodecFactory` ベースに変わっており、`Concentus.OggFile` 1.0.4 と整合しないため)。
-- `WebRtcVadSharp` は `WebRtcVad.dll` (ネイティブ) を要求する。AnyCPU だと `WebRtcVadSharp.targets` が警告を出して既定 x64 を使うため、`Sample.Shared` および両クライアントは `<PlatformTarget>x64</PlatformTarget>` を明示している。`Sample.Shared` 自体はアーキ非依存だが NuGet パッケージ側のターゲットを満たすため。
-- 両クライアント側にも `WebRtcVadSharp` を直接参照しているのは、ネイティブ DLL を exe の `bin/` に確実にコピーさせるため (Shared だけ参照しても落ちてくれないことがある)。
-- `Grpc.Core` 2.46.x は EOL だが net48 用にこれを使う。NuGet 警告は無視する方針。
+- `WebRtcVadSharp` は `WebRtcVad.dll` (ネイティブ) を要求する。AnyCPU だと `WebRtcVadSharp.targets` が警告を出して既定 x64 を使うため、`Sample.Shared` および全クライアントは `<PlatformTarget>x64</PlatformTarget>` を明示している。
+- sherpa-onnx / Azure Speech / NAudio のネイティブ DLL も x64 のみ提供。クライアント側は一律 x64 で揃える。
+- gRPC は MagicOnion v7 で統一しているのでクロスバージョンの罠は無い。クライアント側の HTTP/2 ランタイムは `Grpc.Net.Client` (`SocketsHttpHandler` ベース)。サーバー側は `Grpc.AspNetCore` (Kestrel)。
 
-### 3.2 クロスバージョン通信に関する注記 (C案)
+### 3.2 共有ライブラリの方針
 
-- クライアントは MagicOnion v4 (Grpc.Core ベース)、サーバーは MagicOnion v7 (Grpc.AspNetCore ベース)。これは公式に保証された組み合わせではない。
-- Unary と ClientStreaming のみ使用し、StreamingHub は使わない (StreamingHub は v5 でハートビート仕様などが変更されたため非対称構成では避ける)。
-- MessagePack のメジャーバージョンは v4/v7 とも 2.x で揃えること。
-- もし通信エラーが発生する場合のフォールバック順:
-  1. サーバー側 MagicOnion を v4 系に下げて Grpc.Core でホスト (B案)
-  2. MagicOnion をやめて生 gRPC (`.proto` + `Grpc.Tools`) に切替 (D案)
+`Sample.Shared` は `net10.0` ライブラリとして 1 か所で `IRecordingService` 契約と DTO を定義し、サーバー・クライアント双方が `ProjectReference` で参照する。MagicOnion バージョンが揃っているので追加の細工 (ソースリンクや同名インタフェースのローカル定義) は不要。
 
-### 3.3 共有ライブラリの方針
-
-`Sample.Shared` は MagicOnion v4 の `MagicOnion.Abstractions` を参照する形で `netstandard2.0` でビルドし、両クライアント (NetFx 4.8 + MagicOnion v4) から `ProjectReference` で参照する。
-
-サーバー (.NET 10 + MagicOnion v7) は `Sample.Shared` を **DLL として参照しない**。理由: `MagicOnion.Abstractions` v4 と v7 で `ClientStreamingResult<,>` の `[AsyncMethodBuilder]` 属性の有無が異なり、同居させると `async ClientStreamingResult` が解決できない。
-
-代わりにサーバーは:
-
-- `Sample.Shared/Dto/*.cs` を **Compile Include + Link** でソース取り込み (DTO 定義と MessagePack 属性を共用)
-  ```xml
-  <Compile Include="..\Sample.Shared\Dto\*.cs">
-      <Link>Shared\%(FileName).cs</Link>
-  </Compile>
-  ```
-- `Sample.Server.Services.IRecordingService` を**ローカル定義**し、`Task<ClientStreamingResult<,>>` を返す v7 風シグネチャを採用
-
-gRPC のサービス名は `Type.Name` (= "IRecordingService") + メソッド名で決まるため、クライアントとサーバーで namespace が違っても疎通する。MessagePack の DTO は同一ソース由来なのでバイナリ互換も保たれる。
+`VadGate.cs` も `Sample.Shared` に置き、両クライアント (Streaming / Unary) と STT クライアントから直接使う。`WebRtcVadSharp` の `PackageReference` は `Sample.Shared` 側にあり、各クライアントへは ProjectReference 経由で伝播するので、ネイティブ DLL も `bin/` に展開される。
 
 ## 4. オーディオパラメータ (固定)
 
@@ -117,18 +97,19 @@ gRPC のサービス名は `Type.Name` (= "IRecordingService") + メソッド名
 public interface IRecordingService : IService<IRecordingService>
 {
     // ClientStreaming 版: 録音中フレームを逐次送信
-    ClientStreamingResult<RecordingChunk, RecordingResult> SaveStreaming();
+    // v7 ではサーバー・クライアント共通で Task<ClientStreamingResult<,>> を返す
+    Task<ClientStreamingResult<RecordingChunk, RecordingResult>> SaveStreaming();
 
     // Unary 版: ローカルでエンコード済みの Ogg Opus を一括送信
     UnaryResult<RecordingResult> SaveUnary(SaveUnaryRequest request);
 
     // ダウンロード (再生用): 保存済みファイル全体を取得
-    // 引数 0 個メソッドは v4 ↔ v7 で msgpack ワイヤーフォーマット非互換のためダミー DTO を持たせる (§11.1)
+    // 引数 0 個の Unary は MagicOnion / MessagePack の組合せで地味に踏みやすいのでダミー DTO を持たせる
     UnaryResult<DownloadResult> Download(DownloadRequest request);
 }
 ```
 
-サーバー側は `Sample.Server.Services.IRecordingService` でローカル再定義。シグネチャは v7 風で `SaveStreaming` の戻り値だけ `Task<ClientStreamingResult<,>>` に包む (§3.3, §11.1)。
+クライアント側からの呼び出しは `var ctx = await client.SaveStreaming();` で `ClientStreamingResult<,>` を取得し、`ctx.RequestStream.WriteAsync(...)` でチャンクを送信、最後に `ctx.RequestStream.CompleteAsync()` + `await ctx.ResponseAsync` でレスポンスを受ける。
 
 ### 6.2 DTO
 
@@ -160,8 +141,7 @@ public class SaveUnaryRequest
 [MessagePackObject]
 public class DownloadRequest
 {
-    // 現状未使用 (単一ファイル前提)。
-    // MagicOnion v4 → v7 の引数 0 個メソッド非互換 (§11.1) を回避するためのダミー引数。
+    // 現状未使用 (単一ファイル前提)。引数 0 個メソッドを避けるためのダミー。
     [Key(0)] public string? FileId { get; set; }
 }
 
@@ -216,19 +196,23 @@ public class DownloadResult
 
 ## 8. クライアント共通仕様 (`Sample.Client.Streaming` / `Sample.Client.Unary`)
 
-### 8.1 UI (Windows Forms)
+### 8.1 UI (WPF / `MainWindow.xaml`)
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │  [● 録音] [▶ 再生] [⏸ 一時停止] [■ 停止]              │
 │                                                      │
 │  ├──────●──────────────────────┤                     │
-│  (シークバー)                                         │
+│  (シークスライダー)                                   │
 │                                                      │
 │  00:12 / 00:34                                       │
 │  状態: 待機中 / 録音中 / 再生中 / 一時停止             │
 │                                                      │
-│  [☐ 無音をカットする (VAD)]   精度: ──●──── (強め)    │
+│  [☐ 無音をカットする (VAD)]   精度: ──●──── (ゆるめ)  │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐ │
+│  │ (WaveformView: 録音中の波形をリアルタイム描画) │ │
+│  └────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -238,11 +222,12 @@ public class DownloadResult
 | 再生ボタン (`btnPlay`) | サーバーから DL → デコード → 再生開始 / 一時停止解除 |
 | 一時停止ボタン (`btnPause`) | 再生中の `WaveOutEvent` を `Pause()` |
 | 停止ボタン (`btnStop`) | 録音 or 再生を停止 |
-| シークバー (`tbSeek`, `TrackBar`, 0..1000) | 再生位置の表示・操作。録音中は無効化 |
+| シークスライダー (`tbSeek`, WPF `Slider`, 0..1000) | 再生位置の表示・操作。録音中は無効化 |
 | 経過/全長ラベル (`lblTime`) | `mm:ss / mm:ss` 形式で再生時間を表示 |
 | ステータスラベル (`lblStatus`) | "状態: ..." を表示 |
 | 無音除去チェック (`chkRemoveSilence`) | VAD によるリアルタイム無音カットの有効/無効。録音中は無効化 |
-| 精度スライダー (`tbVadAggressiveness`, 0..3) | VAD aggressiveness。0=ゆるめ / 1=ふつう / 2=強め (既定) / 3=最強。録音中は無効化 |
+| 精度スライダー (`tbVadAggressiveness`, 0..3) | VAD aggressiveness。0=ゆるめ (既定) / 1=ふつう / 2=強め / 3=最強。録音中は無効化 |
+| 波形ビュー (`waveformView`) | `FrameworkElement` を継承した独自描画コントロール (`OnRender(DrawingContext)`) |
 
 両クライアントの UI は実質同一 (タイトルだけ "Sample.Client.Streaming" / "Sample.Client.Unary" で区別)。
 
@@ -262,8 +247,8 @@ public class DownloadResult
 **録音開始 (`StartAsync`)**:
 
 1. `OpusEncoder.Create(48000, 1, OPUS_APPLICATION_VOIP)` 生成、Bitrate 設定
-2. `service.SaveStreaming()` で `ClientStreamingResult<,>` を取得 (v4 クライアントは同期返却)
-3. `ChunkForwardStream` を生成。送信デリゲート内で `_streamCall.RequestStream.WriteAsync(new RecordingChunk{ OggOpusBytes = bytes }).ConfigureAwait(false)` を呼ぶ
+2. `var ctx = await service.SaveStreaming();` で `ClientStreamingResult<,>` を取得 (v7 では Task で包まれているので await する)
+3. `ChunkForwardStream` を生成。送信デリゲート内で `ctx.RequestStream.WriteAsync(new RecordingChunk{ OggOpusBytes = bytes }).ConfigureAwait(false)` を呼ぶ
 4. `OpusOggWriteStream(encoder, chunkForwardStream)` を生成。これだけで OpusHead/OpusTags が ChunkForwardStream に書き込まれる
 5. その場で `_forwardStream.Flush()` を呼んで gRPC ストリームの最初の `WriteAsync` を打ち込み、HTTP/2 ストリームを温めておく (初回 WriteAsync 遅延による不安定さ回避)
 6. `WaveInEvent.StartRecording()`
@@ -277,8 +262,8 @@ public class DownloadResult
 
 1. `_vadGate?.Flush(...)` で VAD の Open 状態の端数フレームを WriteSamples (Finish 後は WriteSamples 不可なので順番厳守)
 2. `_oggWriter.Finish()` で Ogg トレーラ書き出し + 内部 Stream Close
-3. `_streamCall.RequestStream.CompleteAsync()` で gRPC レイヤの END_STREAM を送る (これは ChunkForwardStream の Close とは別物。HTTP/2 ストリーム末端を相手に通知する)
-4. `await _streamCall.ResponseAsync` で `RecordingResult` 受領
+3. `ctx.RequestStream.CompleteAsync()` で gRPC レイヤの END_STREAM を送る (これは ChunkForwardStream の Close とは別物。HTTP/2 ストリーム末端を相手に通知する)
+4. `await ctx.ResponseAsync` で `RecordingResult` 受領
 5. `RecordingFinished` / `RecordingFailed` イベントを発火し、`StopAsync` の `TaskCompletionSource` を完了させる
 
 ### 8.4 Unary 版送信パス (`Sample.Client.Unary`)
@@ -297,7 +282,7 @@ public class DownloadResult
 4. `await _service.SaveUnary(new SaveUnaryRequest { OggOpusBytes = bytes })` で一括送信
 5. `RecordingFinished` / `RecordingFailed` 発火
 
-録音時間が長いとメッセージが膨らむため、`MaxSendMessageLength` を 64 MB に設定。
+録音時間が長いとメッセージが膨らむため、`MaxSendMessageSize` を 64 MB に設定。
 
 ### 8.5 再生処理 (両クライアント共通)
 
@@ -305,13 +290,13 @@ public class DownloadResult
 2. `OpusDecoder.Create(48000, 1)` + `OpusOggReadStream` で Ogg をデコードしながら全 PCM (16-bit, 48kHz, mono) を `MemoryStream` に展開
 3. `RawSourceWaveStream(memoryStream, new WaveFormat(48000, 16, 1))` で `WaveStream` 化
 4. `WaveOutEvent.Init(...)` → `Play()` で再生
-5. シークバー操作 (`tbSeek.Scroll` / `MouseUp`) は `RawSourceWaveStream.Position = (long)(seconds * BytesPerSecond)` で実現
+5. シークスライダー操作 (`Slider.PreviewMouseDown` / `PreviewMouseUp` / `ValueChanged`) は `RawSourceWaveStream.Position = (long)(seconds * BytesPerSecond)` で実現
    - `BytesPerSecond = 48000 * 1 * 2 = 96000`
    - 16-bit 境界に揃えるため `bytePos -= bytePos % 2`
-6. 再生中は UI スレッドの `Timer` (100ms 周期) で `Position` を読んでシークバーと時刻ラベルを更新
+6. 再生中は `DispatcherTimer` (100ms 周期) で `Position` を読んでスライダーと時刻ラベルを更新
 7. `PlaybackStopped` で再生完了処理 (UI 状態を待機中に戻す)
 
-ドラッグ中 (`MouseDown` ↔ `MouseUp`) は `_seeking = true` で UI タイマー側の値書き換えを抑止し、ドラッグ操作と競合しないようにする。
+ドラッグ中 (`PreviewMouseDown` ↔ `PreviewMouseUp`) は `_seeking = true` で UI タイマー側の値書き換えを抑止し、ドラッグ操作と競合しないようにする。タイマーが値を書き戻すときは `_suppressSeekEvent` フラグで `ValueChanged` ハンドラの再帰を遮断する。
 
 ### 8.6 状態遷移
 
@@ -321,7 +306,7 @@ public class DownloadResult
    └──再生ボタン──> (DL中) ──> [再生中] ⇄ [一時停止] ──停止/末尾──> [待機中]
 ```
 
-排他: 録音中は再生・一時停止・シークバー無効、再生/一時停止中は録音ボタン無効、録音中は VAD コントロールも変更不可。
+排他: 録音中は再生・一時停止・シークスライダー無効、再生/一時停止中は録音ボタン無効、録音中は VAD コントロールも変更不可。
 
 ## 9. VAD (任意 — 録音時無音除去)
 
@@ -334,7 +319,7 @@ WebRTC VAD (`WebRtcVadSharp` 1.3.2) を使い、20 ms フレーム単位で voic
 | トリガー | 60 ms (= 3 フレーム連続 voice) | ゲートを Open する条件 |
 | プリロール | 100 ms (= 5 フレーム) | Open 瞬間に直前バッファを一括出力 (語頭の子音切り落としを防ぐ) |
 | ハングオーバー | 200 ms (= 10 フレーム) | voice が途切れても出力を続ける時間 (息継ぎ・小さな間で切れない) |
-| Aggressiveness | 0..3 (既定 2) | `WebRtcVad.OperatingMode`。値が大きいほど voice 判定が厳しくなる |
+| Aggressiveness | 0..3 (既定 0 = ゆるめ) | `WebRtcVad.OperatingMode`。値が大きいほど voice 判定が厳しくなる |
 
 `Process(short[] input, int count, Action<short[],int> emit)` は任意サンプル数で呼んでよい。内部で 960 サンプル境界に整列し、voice 判定結果に応じて `emit` を呼ぶ。`emit` 内ではバッファを即時消費すること (戻った直後に内部で書き換えられる可能性がある)。録音停止時は `Flush(emit)` を呼んで Open 状態の端数フレームを吐き出す (Closed 状態のプリロールは「開かなかった末尾の無音」として捨てる)。
 
@@ -346,11 +331,11 @@ VAD は録音パイプライン内で完結しているので、Streaming/Unary 
 
 - `MaxReceiveMessageSize` / `MaxSendMessageSize`: 64 MB (`64 * 1024 * 1024`)
   - サーバー: `builder.Services.AddGrpc(o => { o.MaxReceiveMessageSize = ...; o.MaxSendMessageSize = ...; })`
-  - クライアント: `Channel` 構築時の `ChannelOption(ChannelOptions.MaxReceiveMessageLength, ...)` / `MaxSendMessageLength`
+  - クライアント: `GrpcChannel.ForAddress(url, new GrpcChannelOptions { MaxReceiveMessageSize = ..., MaxSendMessageSize = ... })`
 - 平文 HTTP/2 (h2c)
   - サーバー: `Kestrel` の `ListenAnyIP(5000, o => o.Protocols = HttpProtocols.Http2)`
-  - クライアント: `new Channel("localhost", 5000, ChannelCredentials.Insecure)`
-- クライアント側で録音開始前に `Channel.ConnectAsync(deadline)` を呼んで HTTP/2 コネクションを事前確立している。ClientStreaming で初回 `WriteAsync` が遅延すると Grpc.Core が状態を不安定にすることがあるため。
+  - クライアント: `GrpcChannel.ForAddress("http://host:5000", ...)` + `App.xaml.cs` で `AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true)` を有効化 (TLS なしの HTTP/2 を `SocketsHttpHandler` が許可するため必須)
+- Streaming クライアントは録音開始前に `GrpcChannel.ConnectAsync(...)` を呼んで HTTP/2 コネクションを事前確立している。初回 `WriteAsync` 遅延による不安定さ回避。
 
 ## 11. ディレクトリ構造 (実体)
 
@@ -359,47 +344,63 @@ src/
 ├── Sample.Shared/
 │   ├── Sample.Shared.csproj
 │   ├── AudioConstants.cs                共通オーディオ定数 (48k/16bit/mono/20ms/64kbps)
-│   ├── IRecordingService.cs             v4 風シグネチャのサービス契約
+│   ├── IRecordingService.cs             サービス契約 (v7 共通シグネチャ)
 │   ├── Audio/
 │   │   └── VadGate.cs                   WebRTC VAD ゲート (プリロール/トリガー/ハングオーバー)
 │   └── Dto/
 │       ├── RecordingChunk.cs
 │       ├── RecordingResult.cs           Success / SavedPath / ByteSize / ErrorMessage
 │       ├── SaveUnaryRequest.cs
-│       ├── DownloadRequest.cs           v4↔v7 引数 0 個 Unary 非互換のためのダミー DTO
+│       ├── DownloadRequest.cs           引数 0 個 Unary を避けるためのダミー DTO
 │       └── DownloadResult.cs            Exists / OggOpusBytes
 │
 ├── Sample.Server/
-│   ├── Sample.Server.csproj             Compile Include + Link で ../Sample.Shared/Dto/*.cs を取り込む
+│   ├── Sample.Server.csproj             Sample.Shared を ProjectReference
 │   ├── Program.cs                       Kestrel h2c :5000, AddMagicOnion, MaxMessageSize=64MB
 │   ├── appsettings.json                 Recording:Directory / Recording:FileName
 │   ├── Services/
-│   │   ├── IRecordingService.cs         サーバーローカル定義 (v7 風: Task<ClientStreamingResult<,>>)
 │   │   └── RecordingService.cs          ServiceBase<IRecordingService>
 │   └── Storage/
 │       ├── IRecordingStore.cs
 │       └── FileSystemRecordingStore.cs  recordings/recording.opus への上書き保存
 │
 ├── Sample.Client.Streaming/
-│   ├── Sample.Client.Streaming.csproj   PlatformTarget=x64
-│   ├── Program.cs
-│   ├── MainForm.cs / MainForm.Designer.cs
+│   ├── Sample.Client.Streaming.csproj   net10.0-windows, UseWPF=true, PlatformTarget=x64
+│   ├── App.xaml / App.xaml.cs           h2c 用 Http2UnencryptedSupport を有効化
+│   ├── MainWindow.xaml / MainWindow.xaml.cs
+│   ├── appsettings.json                 Server:Host / Server:Port
+│   ├── Configuration/
+│   │   └── AppSettings.cs               System.Text.Json で読む簡素な設定ローダ
 │   ├── Audio/
 │   │   ├── StreamingRecorder.cs         NAudio + Concentus + ChunkForwardStream の連結
 │   │   ├── ChunkForwardStream.cs        Stream 派生。32KB 超で同期 WriteAsync
 │   │   └── Player.cs                    Download → OpusOggReadStream → RawSourceWaveStream → WaveOutEvent
-│   └── Rpc/
-│       └── RecordingClient.cs           Channel + MagicOnionClient.Create<IRecordingService>
+│   ├── Rpc/
+│   │   └── RecordingClient.cs           GrpcChannel + MagicOnionClient.Create<IRecordingService>
+│   └── Ui/
+│       └── WaveformView.cs              FrameworkElement + OnRender(DrawingContext) による波形描画
 │
-└── Sample.Client.Unary/
-    ├── Sample.Client.Unary.csproj       PlatformTarget=x64
-    ├── Program.cs
-    ├── MainForm.cs / MainForm.Designer.cs
-    ├── Audio/
-    │   ├── UnaryRecorder.cs             NAudio + Concentus を MemoryStream に組み立て、Stop 時に SaveUnary
-    │   └── Player.cs                    Streaming 版と同等
-    └── Rpc/
-        └── RecordingClient.cs
+├── Sample.Client.Unary/
+│   ├── Sample.Client.Unary.csproj       同上
+│   ├── App.xaml / App.xaml.cs
+│   ├── MainWindow.xaml / MainWindow.xaml.cs
+│   ├── appsettings.json
+│   ├── Configuration/AppSettings.cs
+│   ├── Audio/
+│   │   ├── UnaryRecorder.cs             NAudio + Concentus を MemoryStream に組み立て、Stop 時に SaveUnary
+│   │   └── Player.cs                    Streaming 版と同等
+│   ├── Rpc/RecordingClient.cs
+│   └── Ui/WaveformView.cs
+│
+└── Sample.Client.Stt/
+    ├── Sample.Client.Stt.csproj         + sherpa-onnx + Azure Speech
+    ├── App.xaml / App.xaml.cs
+    ├── MainWindow.xaml / MainWindow.xaml.cs
+    ├── appsettings.json                 Azure キー、モデルパス、サーバー接続先
+    ├── Configuration/SttSettings.cs
+    ├── Audio/                            Ogg Opus → PCM48k → PCM16k float → WAV の一連
+    ├── Rpc/RecordingClient.cs
+    └── Stt/                              ISttEngine + Moonshine / Whisper / Azure 実装
 ```
 
 ## 12. 既知の制約
@@ -410,57 +411,45 @@ src/
    `BufferMilliseconds = 20` は最小に近い。OS によってはアンダーラン気味になるので、必要なら 40 ms / 60 ms に上げて受信側で 20 ms フレームに再分割する (現状はそのまま使用)。
 3. **gRPC メッセージサイズ**
    `Download` で長時間ファイルが 64 MB を超える可能性は仕様上残る。本サンプルでは追求しない。必要なら ServerStreaming に切り替えて分割送信する。
-4. **`Grpc.Core` 2.46.x は EOL**
-   net48 用に他に選択肢が乏しいため採用。NuGet 警告は無視。
-5. **VAD の側面**
+4. **VAD の側面**
    WebRTC VAD は雑音耐性に限界があり、定常的な背景ノイズや音楽下では誤判定が出る。Aggressiveness を上げると無音はよく削れるが語頭/語尾の取りこぼしも増える。本サンプルは「動く例」を提供するに留め、調整は呼び出し側に任せる。
+5. **平文 HTTP/2 (h2c) は学習目的のみ**
+   サンプルは TLS なしで動かしている。本番では Kestrel に証明書を渡し、クライアント側も `https://` で接続すること。`Http2UnencryptedSupport` スイッチも本番では外す。
 
 ## 13. 実装で発見した事項 (建付けの根拠)
 
 実装着手後に判明した事項。設計判断の理由として記録する。
 
-- **`MagicOnion.Abstractions` v4 / v7 の互換性は保てない**
-  v4 の `ClientStreamingResult<TReq, TRes>` は `[AsyncMethodBuilder]` 属性付きで `async` 戻り型として使えるが、v7 では同属性が外されている。共通 DLL を介した型共有は破綻するため、サーバーは Sample.Shared を DLL 参照せず、DTO のみソースリンクする構成にした (§3.3)。
-
-- **MagicOnion v4 クライアントの ClientStreaming 起動は同期呼び出し**
-  `client.SaveStreaming()` は `ClientStreamingResult<,>` を直接返す (await すると `[AsyncMethodBuilder]` の `GetAwaiter` 経由で `ResponseAsync` の結果型に化けて型エラーになる)。`var stream = client.SaveStreaming();` のように代入で受ける必要がある。
-
-- **MagicOnion v7 サーバーの ClientStreaming 戻り型は `Task<ClientStreamingResult<,>>`**
-  v7 の `ClientStreamingResult<,>` は task-like ではないため、`async ClientStreamingResult<,>` は書けない。`Task<>` で包む。
-
-- **MagicOnion v7 の `ClientStreamingContext` には `ReadAllAsync` がない**
-  `while (await ctx.MoveNext()) { var item = ctx.Current; ... }` のループで読む。
-
-- **MagicOnion v4 ↔ v7 では「引数 0 個 Unary」のワイヤーフォーマットが非互換**
-  v4 クライアントは引数なしメソッドのリクエストを `bin 8` (空 byte 配列, msgpack code 0xC4) として送るが、v7 サーバーは `Nil` (0xC0) として読もうとして `MessagePackSerializationException: Unexpected msgpack code 196` で失敗する。**回避策: 引数 0 個メソッドにダミー DTO 引数を持たせる**。本サンプルでは `Download()` を `Download(DownloadRequest request)` に変更して回避。`SaveStreaming()` (ClientStreaming) は最初に request メッセージを送らないため影響なし。`SaveUnary` は元から引数ありなので影響なし。
-
 - **`Concentus.OggFile` 1.0.4 は `Concentus` 1.x 前提**
   `Concentus` 2.x は `OpusEncoder.Create` 静的メソッドを廃止し `OpusCodecFactory.CreateEncoder` に移行している。`Concentus.OggFile` 1.0.4 は 1.x の `OpusEncoder` クラスを直接受け取る API のため、整合性が取れる 1.1.7 を採用。
 
-- **`.NET 10 SDK` のソリューションファイルは `.slnx` (XML 形式)**
-  従来の `.sln` ではなく `Sample.slnx` として作成される。VS / dotnet CLI 双方が解釈可能。
-
 - **`Concentus.Oggfile` の `OpusOggWriteStream.Finish()` は渡された Stream を `Close()` する**
-  `leaveOpen` 相当のオプションがなく、`Finish()` の最後で `_outputStream.Close()` (= `Dispose`) を呼んでくる。Stream を引数で受け取るラッパー型としては作法から外れた挙動なので注意。本サンプルでは `ChunkForwardStream` がこれの影響を受けて、`Finish()` 直後に内部 `MemoryStream` が解放されてしまい、後続コードで触ったときに `ObjectDisposedException` → catch → `finally` の `CleanUp()` で `_streamCall.Dispose()` → gRPC コールが中断 → サーバー側 Kestrel に「The client reset the request stream (RST_STREAM)」として観測される、という連鎖を引き起こしていた。サーバーログだけ見ると「クライアントが切断した」としか読めず原因が見えにくいが、本当の原因はクライアント側の `ObjectDisposedException`。
+  `leaveOpen` 相当のオプションがなく、`Finish()` の最後で `_outputStream.Close()` (= `Dispose`) を呼んでくる。Stream を引数で受け取るラッパー型としては作法から外れた挙動なので注意。本サンプルでは `ChunkForwardStream` がこれの影響を受けて、`Finish()` 直後に内部 `MemoryStream` が解放されてしまい、後続コードで触ったときに `ObjectDisposedException` → catch → `finally` の `CleanUp()` で gRPC コールが中断 → サーバー側 Kestrel に「The client reset the request stream (RST_STREAM)」として観測される、という連鎖を引き起こしていた。サーバーログだけ見ると「クライアントが切断した」としか読めず原因が見えにくいが、本当の原因はクライアント側の `ObjectDisposedException`。
   **対処**: `ChunkForwardStream.Dispose()` で内部 `MemoryStream` を解放しないようにし、`_closed` フラグだけ立てて GC 任せに変更。これで Concentus.Oggfile に勝手に Close されても二重 Flush で壊れない。
 
 - **`Finish()` 後に呼ぶべき "CompleteAsync" は gRPC `RequestStream.CompleteAsync` のみ**
-  `OpusOggWriteStream.Finish()` 内で `ChunkForwardStream.Flush()` まで走り、その同期パスで gRPC `WriteAsync` も完了している。よって `ChunkForwardStream` 自体に対する追加フラッシュは不要。一方で **gRPC レイヤの `_streamCall.RequestStream.CompleteAsync()` は別物で、これを呼ばないと HTTP/2 ストリームの END_STREAM がサーバーに届かず `MoveNext` のループが抜けない**。両者は名前が似ているので混同しないこと。
+  `OpusOggWriteStream.Finish()` 内で `ChunkForwardStream.Flush()` まで走り、その同期パスで gRPC `WriteAsync` も完了している。よって `ChunkForwardStream` 自体に対する追加フラッシュは不要。一方で **gRPC レイヤの `ctx.RequestStream.CompleteAsync()` は別物で、これを呼ばないと HTTP/2 ストリームの END_STREAM がサーバーに届かず `MoveNext` のループが抜けない**。両者は名前が似ているので混同しないこと。
 
 - **ClientStreaming 側はバックグラウンド・ポンプ・タスクではなく同期送信に**
   当初 `ChunkForwardStream` はバッファ溢れ時に `BlockingCollection<byte[]>` 経由で別タスクから `WriteAsync` する設計だったが、Concentus.Oggfile の Close 問題と相まって停止時のタイミング起因で不安定だったため、ポンプを廃止し NAudio スレッドで `WriteAsync.GetAwaiter().GetResult()` で同期ブロックする形にした。各チャンクは数十 KB なのでサンプル用途では十分。
 
 - **同期 `GetAwaiter().GetResult()` 経路では `ConfigureAwait(false)` 必須**
-  ChunkForwardStream の同期送信は UI スレッド (録音停止時の警告フラッシュ等) からも呼ばれるパスがあるので、`_sendAsync` ラムダ内の `await _streamCall.RequestStream.WriteAsync(...)` は `ConfigureAwait(false)` を付けないと SynchronizationContext デッドロックになる。UI スレッドが `.GetResult()` でブロックしている間に await の継続が UI スレッドへポストされて永久に動かない、という典型的なパターン。
+  ChunkForwardStream の同期送信は UI スレッド (録音停止時の警告フラッシュ等) からも呼ばれるパスがあるので、`_sendAsync` ラムダ内の `await ctx.RequestStream.WriteAsync(...)` は `ConfigureAwait(false)` を付けないと SynchronizationContext デッドロックになる。UI スレッドが `.GetResult()` でブロックしている間に await の継続が UI スレッドへポストされて永久に動かない、という典型的なパターン。
 
 - **`OpusOggWriteStream` 構築直後に Ogg ヘッダ (OpusHead/OpusTags) が出力先 Stream に書き込まれる**
-  これを利用して、録音 (`WaveInEvent.StartRecording`) 前に `ChunkForwardStream.Flush()` を 1 回呼んで gRPC ストリームを温めている。初回 `WriteAsync` が録音開始から数百 ms 遅れて発生すると Grpc.Core が状態を一時的に不安定にし、最初のチャンクが落ちるケースがあったため。
+  これを利用して、録音 (`WaveInEvent.StartRecording`) 前に `ChunkForwardStream.Flush()` を 1 回呼んで gRPC ストリームを温めている。初回 `WriteAsync` が録音開始から数百 ms 遅れて発生すると gRPC レイヤが状態を一時的に不安定にし、最初のチャンクが落ちるケースがあったため。
 
 - **VAD と `Finish()` の順序**
   `VadGate.Flush(emit)` は `OpusOggWriteStream.WriteSamples` を呼ぶ。`OpusOggWriteStream.Finish()` 後は内部 Stream が Close 済みで WriteSamples が落ちるので、必ず `vadGate.Flush(...)` → `oggWriter.Finish()` の順に呼ぶこと。両レコーダの `OnRecordingStopped` でこの順序を守っている。
 
 - **`WebRtcVadSharp` はネイティブ DLL を要求し AnyCPU では警告を出す**
-  `WebRtcVadSharp.targets` が「プラットフォーム明示が必要」と警告し既定 x64 を使う。`Sample.Shared` および両クライアントの csproj に `<PlatformTarget>x64</PlatformTarget>` を明示。両クライアントは Shared 経由ではなく直接 `WebRtcVadSharp` を `PackageReference` する (ネイティブ `WebRtcVad.dll` を exe の `bin/` に確実にコピーさせるため)。
+  `WebRtcVadSharp.targets` が「プラットフォーム明示が必要」と警告し既定 x64 を使う。`Sample.Shared` および全クライアントの csproj に `<PlatformTarget>x64</PlatformTarget>` を明示。
+
+- **`Grpc.Net.Client` の h2c は `Http2UnencryptedSupport` スイッチが必須**
+  `SocketsHttpHandler` は既定で TLS なしの HTTP/2 を許可しない。`AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);` を `GrpcChannel.ForAddress("http://...")` より前に呼んでおく (各クライアントの `App.xaml.cs` コンストラクタで設定済み)。
+
+- **`.NET 10 SDK` のソリューションファイルは `.slnx` (XML 形式)**
+  従来の `.sln` ではなく `Sample.slnx` として作成される。VS / dotnet CLI 双方が解釈可能。
 
 ## 14. 非対象 (このサンプルで扱わないこと)
 

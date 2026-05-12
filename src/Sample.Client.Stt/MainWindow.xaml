@@ -1,0 +1,45 @@
+<Window x:Class="Sample.Client.Stt.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sample.Client.Stt (STT)"
+        Width="640" Height="500"
+        MinWidth="520" MinHeight="380"
+        FontSize="13">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <GroupBox Grid.Row="0" Header="STT エンジン">
+            <StackPanel Orientation="Horizontal" Margin="8,4,8,4">
+                <RadioButton x:Name="rbMoonshine" Content="Moonshine ja base (軽量)" IsChecked="True"
+                             GroupName="Engine" VerticalAlignment="Center" />
+                <RadioButton x:Name="rbWhisper" Content="Whisper large-v3 (高精度)" Margin="20,0,0,0"
+                             GroupName="Engine" VerticalAlignment="Center" />
+                <RadioButton x:Name="rbAzure" Content="Azure Speech (クラウド)" Margin="20,0,0,0"
+                             GroupName="Engine" VerticalAlignment="Center" />
+            </StackPanel>
+        </GroupBox>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+            <Button x:Name="btnTranscribe" Content="文字起こし開始" Width="140" Height="32"
+                    Click="btnTranscribe_Click" />
+            <Button x:Name="btnCancel" Content="キャンセル" Width="100" Height="32" Margin="8,0,0,0"
+                    IsEnabled="False" Click="btnCancel_Click" />
+        </StackPanel>
+
+        <TextBlock x:Name="lblStatus" Grid.Row="2" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"
+                   Text="状態: 待機中" />
+
+        <ProgressBar x:Name="progressBar" Grid.Row="3" Margin="0,6,0,0" Height="18" Visibility="Collapsed" />
+
+        <TextBox x:Name="txtResult" Grid.Row="4" Margin="0,8,0,0"
+                 AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                 FontFamily="Yu Gothic UI, Meiryo, sans-serif" />
+    </Grid>
+</Window>
